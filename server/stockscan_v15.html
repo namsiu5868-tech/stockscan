@@ -861,14 +861,66 @@ async function startScan(){
       };
     });
 
+    // RS 계산 (전종목 등락률 기준 순위 → 0~100)
+    const prices = STOCKS.map(s => s.price || 0);
+    const sorted = [...prices].sort((a,b) => a-b);
+    STOCKS.forEach(s => {
+      const rank = sorted.indexOf(s.price);
+      s.rs = s.price > 0 ? Math.round((rank / sorted.length) * 100) : 50;
+    });
+
+    // 선택된 버튼으로 필터링
+    const activeButtons = [...document.querySelectorAll('.cb.on')].map(b=>b.textContent.trim());
+    let filtered = [...STOCKS];
+
+    if(activeButtons.length > 0){
+      filtered = STOCKS.filter(s => {
+        const results = [];
+
+        // 1단계
+        if(activeButtons.includes('RS80↑'))      results.push(s.rs >= 80);
+        if(activeButtons.includes('상대강도↑'))  results.push(s.rs >= 60);
+        if(activeButtons.includes('와인2단계'))   results.push(s.ma5>0 && s.ma20>0 && s.ma5>s.ma20 && s.price>s.ma20);
+        if(activeButtons.includes('4단계제외'))   results.push(!(s.price < s.ma200 && s.ma200 > 0 && s.ma60 < s.ma120));
+
+        // 3단계
+        if(activeButtons.includes('정배열'))      results.push(s.ma5>0&&s.ma20>0&&s.ma60>0&&s.ma120>0&&s.ma5>s.ma20&&s.ma20>s.ma60&&s.ma60>s.ma120);
+        if(activeButtons.includes('120일↑'))      results.push(s.price > s.ma120 && s.ma120 > 0);
+        if(activeButtons.includes('골든크로스'))  results.push(s.ma5 > s.ma20 && s.ma20 > 0);
+        if(activeButtons.includes('수정초'))      results.push(s.ma5>0&&s.ma20>0&&Math.abs(s.ma5-s.ma20)/s.ma20 < 0.03);
+
+        // 결과: 선택된 조건 중 하나라도 통과하면 포함 (OR 방식)
+        // 단 '4단계제외'는 AND 방식 (제외 조건이므로)
+        const excludeConds = ['4단계제외'];
+        const includeConds = activeButtons.filter(b => !excludeConds.includes(b) && results.length > 0);
+
+        // 제외 조건 먼저 체크
+        if(activeButtons.includes('4단계제외')){
+          const pass = !(s.price < s.ma200 && s.ma200 > 0 && s.ma60 < s.ma120);
+          if(!pass) return false;
+        }
+
+        // 나머지 조건 중 최소단계 설정값 이상 통과하면 포함
+        const minConds = parseInt(document.querySelector('.thr-sel:last-of-type')?.value || '1');
+        const includeResults = results.filter((r,i) => {
+          const btn = activeButtons.filter(b=>!excludeConds.includes(b))[i];
+          return btn !== undefined;
+        });
+
+        if(includeResults.length === 0) return true;
+        const passCount = includeResults.filter(r=>r).length;
+        return passCount >= Math.min(minConds, includeResults.length);
+      });
+    }
+
     bar.style.width='100%';
-    msg.textContent=`완료! ${STOCKS.length}개 종목 로드됨`;
+    msg.textContent=`완료! ${filtered.length}개 종목 필터링됨 (전체 ${STOCKS.length}개 중)`;
 
     setTimeout(()=>{
       overlay.classList.remove('show');
       btn.classList.remove('active');
       btn.textContent='▶ 전종목 스캔';
-      renderList(STOCKS);
+      renderList(filtered);
       document.getElementById('lastUp').textContent=new Date().toLocaleTimeString('ko-KR');
     }, 400);
 
