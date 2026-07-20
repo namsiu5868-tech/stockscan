@@ -254,6 +254,54 @@ def _load_stocklist_from_file():
 
 _load_stocklist_from_file()
 
+# ──────────────────────────────────────
+# KRX 휴장일 (매년 초 해당 연도 추가)
+# ──────────────────────────────────────
+KRX_HOLIDAYS = {
+    # 2025년
+    "20250101","20250129","20250130","20250131",
+    "20250301","20250505","20250506","20250606",
+    "20250815","20251003","20251006","20251007","20251008",
+    "20251009","20251225","20251231",
+    # 2026년
+    "20260101","20260128","20260129","20260130",
+    "20260301","20260505","20260525","20260606",
+    "20260815","20260924","20260925","20260928",
+    "20261009","20261225",
+}
+
+def is_trading_day(date=None):
+    if date is None:
+        date = datetime.now()
+    if date.weekday() >= 5:
+        return False
+    if date.strftime("%Y%m%d") in KRX_HOLIDAYS:
+        return False
+    return True
+
+def _auto_collect_on_startup():
+    if not is_trading_day():
+        print(f"[자동수집] 오늘은 휴장일. 건너뜀.")
+        return
+    if os.path.exists(DATA_FILE):
+        try:
+            with open(DATA_FILE, "r", encoding="utf-8") as f:
+                saved = json.load(f)
+            updated = saved.get("updated", "")
+            if updated.startswith(datetime.now().strftime("%Y-%m-%d")):
+                print(f"[자동수집] 오늘 이미 수집 완료 ({updated}). 건너뜀.")
+                return
+        except:
+            pass
+    if not stock_list_cache["data"]:
+        print(f"[자동수집] 전종목 리스트 없음. 건너뜀.")
+        return
+    print(f"[자동수집] 서버 시작 — 전종목 기본데이터 수집 시작")
+    t = threading.Thread(target=collect_basic_data_thread, daemon=True)
+    t.start()
+
+threading.Thread(target=lambda: (time.sleep(3), _auto_collect_on_startup()), daemon=True).start()
+
 def fetch_stock_list_by_market(market_code):
     """시장별 전종목 리스트 수집
     market_code: 0=코스피, 10=코스닥
@@ -416,39 +464,82 @@ def collect_basic_data_thread():
 
         try:
             token = get_token()
-            headers = {
+            # 1) 기본정보 수집
+            headers1 = {
                 "Content-Type": "application/json;charset=UTF-8",
                 "authorization": f"Bearer {token}",
-                "appkey": APP_KEY,
-                "secretkey": APP_SECRET,
+                "appkey": APP_KEY, "secretkey": APP_SECRET,
                 "api-id": "ka10001",
             }
-            res = requests.post(
-                BASE_URL + "/api/dostk/stkinfo",
-                headers=headers,
-                json={"stk_cd": code},
-                timeout=5
-            )
-            data = res.json()
+            res1 = requests.post(BASE_URL + "/api/dostk/stkinfo", headers=headers1, json={"stk_cd": code}, timeout=5)
+            data = res1.json()
+            time.sleep(0.21)
+
+            # 2) 일봉 수집 (200일치)
+            headers2 = {
+                "Content-Type": "application/json;charset=UTF-8",
+                "authorization": f"Bearer {token}",
+                "appkey": APP_KEY, "secretkey": APP_SECRET,
+                "api-id": "ka10081",
+            }
+            today = datetime.now().strftime("%Y%m%d")
+            res2 = requests.post(BASE_URL + "/api/dostk/chart", headers=headers2,
+                                 json={"stk_cd": code, "base_dt": today, "upd_stkpc_tp": "0"}, timeout=5)
+            chart = res2.json()
+            time.sleep(0.21)
+
+            # 종가 리스트 추출 (최신순 → 역순)
+            candles = chart.get("output2") or chart.get("output") or []
+            closes = []
+            for c in candles:
+                p = c.get("cur_prc") or c.get("stck_clpr") or 0
+                try:
+                    closes.append(abs(int(str(p).replace(",", ""))))
+                except:
+                    pass
+            closes = [p for p in closes if p > 0]
+
+            # 이평선 계산
+            def ma(n):
+                if len(closes) >= n:
+                    return round(sum(closes[:n]) / n)
+                return 0
+
+            ma5   = ma(5)
+            ma20  = ma(20)
+            ma60  = ma(60)
+            ma120 = ma(120)
+            ma200 = ma(200)
+
+            # 정배열 여부: 5>20>60>120>200
+            price_now = abs(int(data.get("cur_prc", 0) or 0))
+            is_bullish = (ma5 > 0 and ma20 > 0 and ma60 > 0 and ma120 > 0 and ma200 > 0
+                          and ma5 > ma20 > ma60 > ma120 > ma200)
+            above_120 = price_now > ma120 if ma120 > 0 else False
 
             results.append({
-                "code":     code,
-                "name":     name,
-                "market":   market,
-                "price":    abs(int(data.get("cur_prc", 0) or 0)),
-                "chg_rate": float(data.get("flu_rt", 0) or 0),
-                "volume":   int(data.get("trde_qty", 0) or 0),
-                "per":      float(data.get("per", 0) or 0),
-                "pbr":      float(data.get("pbr", 0) or 0),
-                "roe":      float(data.get("roe", 0) or 0),
+                "code":      code,
+                "name":      name,
+                "market":    market,
+                "price":     price_now,
+                "chg_rate":  float(data.get("flu_rt", 0) or 0),
+                "volume":    int(data.get("trde_qty", 0) or 0),
+                "per":       float(data.get("per", 0) or 0),
+                "pbr":       float(data.get("pbr", 0) or 0),
+                "roe":       float(data.get("roe", 0) or 0),
+                "ma5":       ma5,
+                "ma20":      ma20,
+                "ma60":      ma60,
+                "ma120":     ma120,
+                "ma200":     ma200,
+                "is_bullish": is_bullish,
+                "above_120": above_120,
             })
             scan_status["done"] += 1
 
         except Exception as e:
             scan_status["failed"] += 1
             print(f"[스캔2단계] 실패 {code} {name}: {e}")
-
-        time.sleep(0.21)  # 초당 5건 제한
 
         if (i + 1) % 100 == 0:
             _save_results(results)
