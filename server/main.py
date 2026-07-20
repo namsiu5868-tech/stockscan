@@ -206,7 +206,7 @@ from fastapi.responses import FileResponse
 @app.get("/app")
 def serve_app():
     """StockScan HTML 서빙"""
-    html_path = os.path.join(os.path.dirname(__file__), "stockscan_v14.html")
+    html_path = os.path.join(os.path.dirname(__file__), "stockscan_v15.html")
     return FileResponse(html_path)
 
 # ──────────────────────────────────────
