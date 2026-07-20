@@ -213,6 +213,18 @@ def serve_app():
 # 전종목 리스트 수집
 # ──────────────────────────────────────
 
+def is_normal_stock(code: str, name: str) -> bool:
+    """일반 보통주 여부 판별 — ETF/ETN/스팩/우선주 제외"""
+    if code and len(code) == 6 and code[-1] not in ("0",):
+        return False
+    exclude_keywords = ["ETF", "ETN", "스팩", "SPAC", "리츠", "REIT",
+                        "인버스", "레버리지", "선물", "합성", "채권"]
+    name_upper = name.upper()
+    for kw in exclude_keywords:
+        if kw.upper() in name_upper:
+            return False
+    return True
+
 # 전종목 리스트 캐시
 STOCKLIST_FILE = os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "data", "stocklist.json")
 stock_list_cache = {"data": [], "updated": None}
@@ -277,7 +289,7 @@ def fetch_stock_list_by_market(market_code):
         for item in items:
             code = (item.get("code") or item.get("stk_cd") or "").strip()
             name = (item.get("name") or item.get("stk_nm") or "").strip()
-            if code and name:
+            if code and name and is_normal_stock(code, name):
                 all_stocks.append({
                     "code": code,
                     "name": name,
@@ -352,18 +364,6 @@ scan_status = {
 
 DATA_DIR  = os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "data")
 DATA_FILE = os.path.join(DATA_DIR, "stocks_basic.json")
-
-def is_normal_stock(code: str, name: str) -> bool:
-    """일반 보통주 여부 판별 — ETF/ETN/스팩/우선주 제외"""
-    if code and len(code) == 6 and code[-1] not in ("0",):
-        return False
-    exclude_keywords = ["ETF", "ETN", "스팩", "SPAC", "리츠", "REIT",
-                        "인버스", "레버리지", "선물", "합성", "채권"]
-    name_upper = name.upper()
-    for kw in exclude_keywords:
-        if kw.upper() in name_upper:
-            return False
-    return True
 
 def _save_results(results):
     """결과를 JSON 파일로 덮어쓰기 저장"""
