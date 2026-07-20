@@ -214,14 +214,25 @@ def serve_app():
 # ──────────────────────────────────────
 
 def is_normal_stock(code: str, name: str) -> bool:
-    """일반 보통주 여부 판별 — ETF/ETN/스팩/우선주 제외"""
-    if code and len(code) == 6 and code[-1] not in ("0",):
+    """일반 보통주 여부 판별"""
+    if not code:
         return False
-    exclude_keywords = ["ETF", "ETN", "스팩", "SPAC", "리츠", "REIT",
-                        "인버스", "레버리지", "선물", "합성", "채권"]
+    c = code.lstrip("A").strip()
+    if len(c) != 6:
+        return False
+    # 우선주: 끝자리 5
+    if c[-1] == "5":
+        return False
+    # ETF/ETN: 앞자리 1로 시작
+    if c[0] == "1":
+        return False
+    # 스팩: 앞자리 4로 시작
+    if c[0] == "4":
+        return False
+    # 이름 기반 — 보통주에 절대 안 들어가는 키워드만
     name_upper = name.upper()
-    for kw in exclude_keywords:
-        if kw.upper() in name_upper:
+    for kw in ["ETF", "ETN", "스팩", "SPAC", "인버스", "레버리지"]:
+        if kw in name_upper:
             return False
     return True
 
@@ -482,7 +493,7 @@ def get_scan_status():
 
 @app.get("/scan/result")
 def get_scan_result():
-    """저장된 수집 결과 조회"""
+    """저장된 수집 결과 조회 (샘플 5개)"""
     if not os.path.exists(DATA_FILE):
         return {"success": False, "message": "수집 데이터 없음. /scan/collect 먼저 실행하세요."}
     with open(DATA_FILE, "r", encoding="utf-8") as f:
@@ -492,4 +503,18 @@ def get_scan_result():
         "updated": data.get("updated"),
         "total":   data.get("total"),
         "sample":  data["data"][:5]
+    }
+
+@app.get("/scan/result/all")
+def get_scan_result_all():
+    """저장된 수집 결과 전체 조회"""
+    if not os.path.exists(DATA_FILE):
+        return {"success": False, "message": "수집 데이터 없음. /scan/collect 먼저 실행하세요."}
+    with open(DATA_FILE, "r", encoding="utf-8") as f:
+        data = json.load(f)
+    return {
+        "success": True,
+        "updated": data.get("updated"),
+        "total":   data.get("total"),
+        "data":    data["data"]
     }

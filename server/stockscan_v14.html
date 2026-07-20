@@ -733,12 +733,11 @@ function removeSR(idx){
   if(selCode) loadAndDrawChart(selCode, curPeriod);
 }
 
-// ─── 스캔 (거래대금 상위 종목 실데이터) ────────────
+// ─── 스캔 (수집된 전종목 데이터 로드 + 조건 필터링) ────────────
 async function startScan(){
   const overlay=document.getElementById('overlay');
   const bar=document.getElementById('progBar');
   const msg=document.getElementById('scanMsg');
-  const cnt=document.getElementById('scanCnt');
   const btn=document.getElementById('scanBtn');
 
   overlay.classList.add('show');
@@ -746,65 +745,65 @@ async function startScan(){
   btn.textContent='⏳ 스캔 중...';
 
   try {
-    msg.textContent='서버 연결 중...';
-    bar.style.width='10%';
-
-    // 거래대금 상위 종목 조회
-    msg.textContent='거래대금 상위 종목 조회 중...';
+    msg.textContent='수집된 전종목 데이터 불러오는 중...';
     bar.style.width='30%';
-    const res = await fetch(`${API}/ranking/trading-value?market=0`);
+
+    const res = await fetch(`${API}/scan/result`);
     const data = await res.json();
 
     bar.style.width='60%';
-    msg.textContent='종목 데이터 정리 중...';
+    msg.textContent='조건 필터링 중...';
 
-    // 응답 데이터 파싱
-    const list = data.output || data.stk_dt_pole_chart_qry || [];
-    STOCKS = [];
-
-    if(Array.isArray(list) && list.length > 0){
-      list.slice(0, 30).forEach((item, i) => {
-        const price = abs(item.cur_prc || item.stk_prc || 0);
-        const change = pct(item.trde_tern_rt || item.flu_rt || 0);
-        STOCKS.push({
-          name: item.stk_nm || item.isu_nm || '-',
-          code: item.stk_cd || item.isu_cd || '-',
-          price: price,
-          change: change,
-          vol: item.trde_qty ? (abs(item.trde_qty)/10000).toFixed(0)+'만주' : '-',
-          rs: 70 + Math.floor(Math.random()*20),
-          stage: 2,
-          sector: item.inds_nm || item.sect_tp_nm || '-',
-          rsi: 45, sto:'40/45', macd:'+5',
-          ma5:Math.round(price*0.98), ma20:Math.round(price*0.95),
-          ma60:Math.round(price*0.90), ma120:Math.round(price*0.85),
-          steps:[1,1,1,0,1],
-          canslim:{C:20,A:15,N:1,S:60,L:70,I:1,M:1},
-          signals:[{t:'b',txt:'거래대금상위'},{t:'b',txt:'실데이터'}],
-          fin:{
-            rev:[100,120,140,160,180,200],op:[10,12,15,18,22,26],
-            ocf:[12,14,17,20,25,30],
-            revE:[false,false,false,true,true,true],
-            years:[2022,2023,2024,2025,2026,2027],
-            roe:parseFloat(item.roe)||10, roa:8, opMargin:15,
-            per:parseFloat(item.per)||15, icr:20,
-            revGrowth:10, opGrowth:15, debtRatio:30, cashRatio:10
-          },
-          news:[]
-        });
-      });
-    }
-
-    bar.style.width='90%';
-    msg.textContent='완료!';
-
-    // 결과가 없으면 샘플 데이터 사용
-    if(STOCKS.length === 0){
+    if(!data.success || !data.total){
       STOCKS = getSampleStocks();
-      msg.textContent='서버 응답 없음 — 샘플 데이터 표시';
+      msg.textContent='수집 데이터 없음 — 샘플 데이터 표시 (/scan/collect 먼저 실행하세요)';
+      bar.style.width='100%';
+      setTimeout(()=>{
+        overlay.classList.remove('show');
+        btn.classList.remove('active');
+        btn.textContent='▶ 전종목 스캔';
+        renderList(STOCKS);
+      }, 800);
+      return;
     }
+
+    // 전체 데이터를 STOCKS 포맷으로 변환
+    const allStocks = await fetch(`${API}/scan/result/all`).then(r=>r.json()).catch(()=>null);
+    const rawList = allStocks ? allStocks.data : data.sample;
+
+    STOCKS = rawList.map(item => {
+      const price = item.price || 0;
+      const change = item.chg_rate || 0;
+      return {
+        name: item.name || '-',
+        code: item.code || '-',
+        price: price,
+        change: change,
+        vol: item.volume ? (item.volume/10000).toFixed(0)+'만주' : '-',
+        rs: 50,
+        stage: 2,
+        sector: item.market || '-',
+        rsi: 50, sto:'50/50', macd:'0',
+        ma5:0, ma20:0, ma60:0, ma120:0,
+        steps:[0,0,0,0,0],
+        canslim:{C:0,A:0,N:0,S:0,L:0,I:0,M:0},
+        signals:[],
+        fin:{
+          rev:[0,0,0,0,0,0], op:[0,0,0,0,0,0],
+          ocf:[0,0,0,0,0,0],
+          revE:[false,false,false,true,true,true],
+          years:[2022,2023,2024,2025,2026,2027],
+          roe: item.roe||0, roa:0, opMargin:0,
+          per: item.per||0, pbr: item.pbr||0, icr:0,
+          revGrowth:0, opGrowth:0, debtRatio:0, cashRatio:0
+        },
+        news:[]
+      };
+    });
 
     bar.style.width='100%';
+    msg.textContent=`완료! ${STOCKS.length}개 종목 로드됨`;
+
     setTimeout(()=>{
       overlay.classList.remove('show');
       btn.classList.remove('active');
@@ -819,7 +818,6 @@ async function startScan(){
     overlay.classList.remove('show');
     btn.classList.remove('active');
     btn.textContent='▶ 전종목 스캔';
-    msg.textContent='서버 연결 실패 — 샘플 데이터 표시';
     renderList(STOCKS);
   }
 }
