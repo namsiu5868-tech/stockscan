@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>StockScan Pro v15</title>
+<title>StockScan Pro v14</title>
 <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@300;400;500;700&family=JetBrains+Mono:wght@400;600;700&display=swap" rel="stylesheet">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js">
 // ─── 서버 상태 체크 ───────────────────────────────
@@ -186,28 +186,28 @@ body{background:var(--bg);color:var(--text);font-family:'Noto Sans KR',sans-seri
 .cb.manual.on{background:#f87171;color:#0f1829;border-color:#f87171}
 /* 가운데 패널 */
 .mid-panel{flex:1;display:flex;flex-direction:column;overflow:hidden;background:var(--bg);min-width:0}
-.mid-hdr{padding:8px 12px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;background:var(--bg2);flex-shrink:0;font-size:11px;font-weight:700;color:var(--text2)}
+.mid-hdr{padding:8px 12px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;background:var(--bg2);flex-shrink:0;font-size:11px;font-weight:700;color:#ffffff}
 .mid-body{flex:1;overflow:hidden;display:flex;flex-direction:column}
 /* 피라미드 통과현황 */
 .pass-panel{padding:10px 12px;border-bottom:1px solid var(--border);background:var(--bg2);flex-shrink:0}
-.pass-title{font-size:9px;color:var(--text3);letter-spacing:1px;margin-bottom:8px;font-weight:700;text-transform:uppercase}
+.pass-title{font-size:10px;color:#ffffff;letter-spacing:1px;margin-bottom:8px;font-weight:700;text-transform:uppercase}
 .pass-steps{display:flex;gap:5px}
 .pass-step{flex:1;background:var(--bg3);border-radius:6px;padding:7px;border:1px solid var(--border)}
-.pass-step-num{font-size:9px;color:var(--text3);margin-bottom:2px;font-weight:700}
+.pass-step-num{font-size:10px;color:#ffffff;margin-bottom:2px;font-weight:700}
 .pass-conds{display:flex;flex-direction:column;gap:2px;margin-top:4px}
-.pass-cond{font-size:9px;padding:2px 5px;border-radius:3px;display:flex;align-items:center;gap:3px}
+.pass-cond{font-size:10px;font-weight:600;padding:2px 5px;border-radius:3px;display:flex;align-items:center;gap:3px}
 .pass-cond.ok{background:rgba(52,211,153,.1);color:#34d399}
 .pass-cond.fail{background:rgba(248,113,113,.1);color:#f87171}
-.pass-cond.na{color:var(--text3)}
+.pass-cond.na{color:#94a3b8}
 /* 종목 비교 테이블 */
 .cmp-panel{flex:1;overflow:hidden;display:flex;flex-direction:column}
-.cmp-title{font-size:9px;color:var(--text3);letter-spacing:1px;padding:6px 12px;font-weight:700;text-transform:uppercase;border-bottom:1px solid var(--border);background:var(--bg2);flex-shrink:0}
+.cmp-title{font-size:10px;color:#ffffff;letter-spacing:1px;padding:6px 12px;font-weight:700;text-transform:uppercase;border-bottom:1px solid var(--border);background:var(--bg2);flex-shrink:0}
 .cmp-table-wrap{flex:1;overflow-y:auto}
-.cmp-table{width:100%;border-collapse:collapse;font-size:10px}
-.cmp-table th{position:sticky;top:0;background:var(--bg3);padding:5px 8px;text-align:right;color:var(--text3);font-weight:600;border-bottom:1px solid var(--border);white-space:nowrap}
+.cmp-table{width:100%;border-collapse:collapse;font-size:11px}
+.cmp-table th{position:sticky;top:0;background:var(--bg3);padding:6px 8px;text-align:right;color:#ffffff;font-weight:700;border-bottom:1px solid var(--border);white-space:nowrap}
 .cmp-table th:first-child{text-align:left}
-.cmp-table td{padding:5px 8px;text-align:right;border-bottom:1px solid rgba(46,64,112,.3)}
-.cmp-table td:first-child{text-align:left;color:var(--text2);font-weight:600;max-width:80px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.cmp-table td{padding:6px 8px;text-align:right;border-bottom:1px solid rgba(46,64,112,.3)}
+.cmp-table td:first-child{text-align:left;color:#ffffff;font-weight:700;max-width:80px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .cmp-table tr.selected td{background:rgba(77,166,255,.1)}
 .cmp-table tr:hover td{background:rgba(77,166,255,.05);cursor:pointer}
 .ind-row-bot{display:flex;gap:8px;flex-wrap:wrap;padding:6px 12px;background:var(--bg2);border-top:1px solid var(--border);flex-shrink:0;font-size:10px}
@@ -325,7 +325,7 @@ body{background:var(--bg);color:var(--text);font-family:'Noto Sans KR',sans-seri
 
 <!-- 헤더 -->
 <div class="hdr">
-  <div class="logo">STOCK<em>SCAN</em> <span style="font-size:9px;color:#6b90c0;font-weight:600;letter-spacing:1px">PRO v15</span></div>
+  <div class="logo">STOCK<em>SCAN</em> <span style="font-size:9px;color:#6b90c0;font-weight:600;letter-spacing:1px">PRO v14</span></div>
   <div class="mkt">
     <div class="mkt-item"><div class="mkt-name">KOSPI</div><div class="mkt-val up">2,847 <span style="font-size:8px">+0.42%</span></div></div>
     <div class="mkt-item"><div class="mkt-name">KOSDAQ</div><div class="mkt-val dn">842 <span style="font-size:8px">-0.18%</span></div></div>
