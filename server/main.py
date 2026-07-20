@@ -436,7 +436,7 @@ def collect_basic_data_thread():
                 "name":     name,
                 "market":   market,
                 "price":    abs(int(data.get("cur_prc", 0) or 0)),
-                "chg_rate": float(data.get("trde_tern_rt", 0) or 0),
+                "chg_rate": float(data.get("flu_rt", 0) or 0),
                 "volume":   int(data.get("trde_qty", 0) or 0),
                 "per":      float(data.get("per", 0) or 0),
                 "pbr":      float(data.get("pbr", 0) or 0),
