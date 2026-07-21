@@ -755,6 +755,32 @@ def collect_basic_data_thread():
                                    closes[0] > box_high * 1.005 and
                                    volumes[0] > vol_avg * 1.5)
 
+            # 매집패턴 — 와이코프 매집 특징 자동 감지
+            accumulation = False
+            if len(closes) >= 40 and len(volumes) >= 40:
+                c40 = [x for x in closes[:40] if x > 0]
+                v40 = [x for x in volumes[:40] if x > 0]
+                h40 = [x for x in highs[:40]  if x > 0]
+                l40 = [x for x in lows[:40]   if x > 0]
+                if len(c40) >= 20 and len(v40) >= 20:
+                    p_high = max(h40); p_low = min(l40)
+                    p_range = (p_high - p_low) / p_low if p_low > 0 else 1
+                    vol_avg40 = sum(v40) / len(v40)
+                    # 조건1: 횡보 범위 20% 이내
+                    cond1 = p_range < 0.20
+                    # 조건2: 대량거래 3회 이상
+                    cond2 = sum(1 for v in v40 if v >= vol_avg40 * 2) >= 3
+                    # 조건3: 상승봉 거래량 > 하락봉 거래량
+                    up_v   = [volumes[i] for i in range(min(40,len(closes),len(volumes),len(opens))) if closes[i]>opens[i]]
+                    dn_v   = [volumes[i] for i in range(min(40,len(closes),len(volumes),len(opens))) if closes[i]<opens[i]]
+                    cond3  = (sum(up_v)/len(up_v) > sum(dn_v)/len(dn_v)) if up_v and dn_v else False
+                    # 조건4: 대량거래 후 주가 5% 이상 하락 없음
+                    big_idx = [i for i,v in enumerate(volumes[:40]) if v >= vol_avg40*2]
+                    cond4 = all(i>0 and (closes[i]-closes[i-1])/closes[i-1] > -0.05 for i in big_idx if i < len(closes) and closes[i-1]>0)
+                    # 조건5: 현재가 횡보구간 내
+                    cond5 = p_low*0.98 <= price_now <= p_high*1.02
+                    accumulation = cond1 and cond2 and cond3 and cond4 and cond5
+
             results.append({
                 "code":        code,
                 "name":        name,
@@ -784,6 +810,7 @@ def collect_basic_data_thread():
                 "n_shape":     n_shape,
                 "box_breakout": box_breakout,
                 "triangle":    triangle,
+                "accumulation": accumulation,
             })
             scan_status["done"] += 1
 
