@@ -731,7 +731,17 @@ def collect_basic_data_thread():
                         recovering = closes[0] > after_peak[-1]                  # 재상승
                         n_shape = rising and pullback and low_higher and vol_down and recovering
 
-            # 박스돌파 — 횡보 후 상단 돌파 + 거래량 동반
+            # 삼각수렴 — 고점하락+저점상승으로 범위 좁아짐
+            triangle = False
+            if len(highs) >= 20 and len(lows) >= 20:
+                h_first = max([x for x in highs[10:20] if x>0] or [0])
+                h_last  = max([x for x in highs[:10]  if x>0] or [0])
+                l_first = min([x for x in lows[10:20]  if x>0] or [99999999])
+                l_last  = min([x for x in lows[:10]   if x>0] or [99999999])
+                range_first = h_first - l_first if h_first > l_first else 0
+                range_last  = h_last  - l_last  if h_last  > l_last  else 0
+                triangle = (h_last < h_first and l_last > l_first and
+                            range_last < range_first * 0.6 and range_first > 0)
             box_breakout = False
             if len(closes) >= 25 and len(volumes) >= 25:
                 box_closes = [x for x in closes[1:21] if x > 0]  # 직전 20봉 (어제 기준)
@@ -773,6 +783,7 @@ def collect_basic_data_thread():
                 "gold_line":   gold_line,
                 "n_shape":     n_shape,
                 "box_breakout": box_breakout,
+                "triangle":    triangle,
             })
             scan_status["done"] += 1
 
