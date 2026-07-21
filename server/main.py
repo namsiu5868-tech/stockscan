@@ -781,6 +781,40 @@ def collect_basic_data_thread():
                     cond5 = p_low*0.98 <= price_now <= p_high*1.02
                     accumulation = cond1 and cond2 and cond3 and cond4 and cond5
 
+            # 거래량다이버전스 — 주가 하락인데 거래량도 감소 (매도압력 약화)
+            vol_divergence = False
+            if len(closes) >= 10 and len(volumes) >= 10:
+                c_first = closes[5:10]; c_last = closes[:5]
+                v_first = volumes[5:10]; v_last = volumes[:5]
+                c_low1 = min([x for x in c_first if x>0] or [0])
+                c_low2 = min([x for x in c_last  if x>0] or [0])
+                v_avg1 = sum([x for x in v_first if x>0])/5 if v_first else 0
+                v_avg2 = sum([x for x in v_last  if x>0])/5 if v_last  else 0
+                vol_divergence = c_low2 < c_low1 and v_avg2 < v_avg1 * 0.7 if c_low1>0 and v_avg1>0 else False
+
+            # RSI다이버전스 — 주가 저점 낮아지는데 RSI 저점 높아짐
+            rsi_divergence = False
+            if len(closes) >= 20:
+                rsi_now  = calc_rsi(closes, 14)
+                rsi_prev = calc_rsi(closes[10:], 14)
+                price_low_now  = min([x for x in closes[:5]  if x>0] or [0])
+                price_low_prev = min([x for x in closes[5:15] if x>0] or [0])
+                rsi_divergence = (price_low_now < price_low_prev and
+                                  rsi_now > rsi_prev and
+                                  price_low_prev > 0)
+
+            # 주봉STO+일봉STO
+            weekly_daily_sto = False
+            if len(closes) >= 30 and len(highs) >= 30 and len(lows) >= 30:
+                w_h = max([x for x in highs[:25] if x>0] or [1])
+                w_l = min([x for x in lows[:25]  if x>0] or [0])
+                w_sto = round((closes[0]-w_l)/(w_h-w_l)*100) if w_h>w_l else 50
+                weekly_sto_oversold = w_sto <= 25
+                sto_now  = calc_sto(highs, lows, closes, 5)
+                sto_prev = calc_sto(highs[1:], lows[1:], closes[1:], 5)
+                daily_sto_golden = sto_now > sto_prev and sto_now <= 50
+                weekly_daily_sto = weekly_sto_oversold and daily_sto_golden
+
             results.append({
                 "code":        code,
                 "name":        name,
@@ -810,7 +844,10 @@ def collect_basic_data_thread():
                 "n_shape":     n_shape,
                 "box_breakout": box_breakout,
                 "triangle":    triangle,
-                "accumulation": accumulation,
+                "accumulation":   accumulation,
+                "vol_divergence": vol_divergence,
+                "rsi_divergence": rsi_divergence,
+                "weekly_daily_sto": weekly_daily_sto,
             })
             scan_status["done"] += 1
 

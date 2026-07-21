@@ -743,6 +743,9 @@ function applyFilterAndRender(){
       if(activeButtons.includes('박스돌파'))     checks.push(s.box_breakout===true);
       if(activeButtons.includes('삼각수렴'))     checks.push(s.triangle===true);
       if(activeButtons.includes('매집패턴'))     checks.push(s.accumulation===true);
+      if(activeButtons.includes('거래량다이버전스')) checks.push(s.vol_divergence===true);
+      if(activeButtons.includes('RSI다이버전스'))  checks.push(s.rsi_divergence===true);
+      if(activeButtons.includes('주봉STO+일봉STO')) checks.push(s.weekly_daily_sto===true);
       // 5단계 보조지표
       if(activeButtons.includes('RSI침체'))     checks.push(s.rsi>0&&s.rsi<=30);
       if(activeButtons.includes('RSI과열'))     checks.push(s.rsi>=70);
@@ -930,6 +933,9 @@ async function startScan(){
         box_breakout: item.box_breakout || false,
         triangle: item.triangle || false,
         accumulation: item.accumulation || false,
+        vol_divergence: item.vol_divergence || false,
+        rsi_divergence: item.rsi_divergence || false,
+        weekly_daily_sto: item.weekly_daily_sto || false,
         vol: item.volume ? (item.volume/10000).toFixed(0)+'만주' : '-',
         rs: 50,
         stage: 2,
@@ -1198,6 +1204,9 @@ function updatePassPanel(s){
     if(name==='박스돌파') return s.box_breakout===true?'ok':s.box_breakout===false&&s.ma5>0?'fail':'na';
     if(name==='삼각수렴') return s.triangle===true?'ok':s.triangle===false&&s.ma5>0?'fail':'na';
     if(name==='매집패턴') return s.accumulation===true?'ok':s.accumulation===false&&s.ma5>0?'fail':'na';
+    if(name==='거래량다이버전스') return s.vol_divergence===true?'ok':s.vol_divergence===false&&s.ma5>0?'fail':'na';
+    if(name==='RSI다이버전스') return s.rsi_divergence===true?'ok':s.rsi_divergence===false&&s.ma5>0?'fail':'na';
+    if(name==='주봉STO+일봉STO') return s.weekly_daily_sto===true?'ok':s.weekly_daily_sto===false&&s.ma5>0?'fail':'na';
     // 5단계 보조지표
     if(name==='RSI침체') return s.rsi>0&&s.rsi!==50 ? (s.rsi<=30?'ok':'fail') : 'na';
     if(name==='RSI과열') return s.rsi>0&&s.rsi!==50 ? (s.rsi>=70?'ok':'fail') : 'na';
