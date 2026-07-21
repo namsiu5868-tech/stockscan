@@ -662,6 +662,28 @@ def collect_basic_data_thread():
                               and ma5>ma20>ma60>ma120>ma200)
             above_120 = price_now > ma120 if ma120 > 0 else False
 
+            # 피보38.2% — 최근 60일 고점/저점 기준
+            recent_highs = [x for x in highs[:60] if x > 0]
+            recent_lows  = [x for x in lows[:60]  if x > 0]
+            fibo_382 = False
+            if recent_highs and recent_lows:
+                peak = max(recent_highs)
+                trough = min(recent_lows)
+                fibo_level = trough + (peak - trough) * 0.382
+                fibo_382 = abs(price_now - fibo_level) / fibo_level < 0.03 if fibo_level > 0 else False
+
+            # 이중바닥 — 최근 40봉 내 두 개 저점이 비슷한 수준
+            double_bottom = False
+            if len(lows) >= 20:
+                lows_20 = [x for x in lows[:40] if x > 0]
+                if len(lows_20) >= 10:
+                    mid = len(lows_20) // 2
+                    low1 = min(lows_20[:mid])
+                    low2 = min(lows_20[mid:])
+                    if low1 > 0 and low2 > 0:
+                        diff = abs(low1 - low2) / max(low1, low2)
+                        double_bottom = diff < 0.03 and price_now > max(low1, low2) * 1.02
+
             results.append({
                 "code":        code,
                 "name":        name,
@@ -685,6 +707,8 @@ def collect_basic_data_thread():
                 "patterns":    patterns,
                 "is_bullish":  is_bullish,
                 "above_120":   above_120,
+                "fibo_382":    fibo_382,
+                "double_bottom": double_bottom,
             })
             scan_status["done"] += 1
 
