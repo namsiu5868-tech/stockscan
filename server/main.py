@@ -561,70 +561,145 @@ def collect_basic_data_thread():
             chart = res2.json()
             time.sleep(0.21)
 
-            # 종가 리스트 추출 (최신순 → 역순)
+            # 일봉 파싱 (OHLCV)
             candles = chart.get("output2") or chart.get("output") or []
-            closes = []
+            closes  = []
+            opens   = []
+            highs   = []
+            lows    = []
+            volumes = []
             for c in candles:
-                p = c.get("cur_prc") or c.get("stck_clpr") or 0
-                try:
-                    closes.append(abs(int(str(p).replace(",", ""))))
-                except:
-                    pass
-            closes = [p for p in closes if p > 0]
+                p  = c.get("cur_prc") or c.get("stck_clpr") or 0
+                op = c.get("open_prc") or c.get("stck_oprc") or 0
+                hi = c.get("high_prc") or c.get("stck_hgpr") or 0
+                lo = c.get("low_prc")  or c.get("stck_lwpr") or 0
+                v  = c.get("trde_qty") or 0
+                try: closes.append(abs(int(str(p).replace(",",""))))
+                except: closes.append(0)
+                try: opens.append(abs(int(str(op).replace(",",""))))
+                except: opens.append(0)
+                try: highs.append(abs(int(str(hi).replace(",",""))))
+                except: highs.append(0)
+                try: lows.append(abs(int(str(lo).replace(",",""))))
+                except: lows.append(0)
+                try: volumes.append(abs(int(str(v).replace(",",""))))
+                except: volumes.append(0)
 
-            # 이평선 계산
-            def ma(n):
-                if len(closes) >= n:
-                    return round(sum(closes[:n]) / n)
-                return 0
+            # 이평선
+            def ma(arr, n):
+                a = [x for x in arr[:n] if x > 0]
+                return round(sum(a)/len(a)) if len(a) >= n else 0
 
-            ma5   = ma(5)
-            ma20  = ma(20)
-            ma60  = ma(60)
-            ma120 = ma(120)
-            ma200 = ma(200)
+            ma5   = ma(closes, 5)
+            ma20  = ma(closes, 20)
+            ma60  = ma(closes, 60)
+            ma120 = ma(closes, 120)
+            ma200 = ma(closes, 200)
 
-            # 정배열 여부: 5>20>60>120>200
+            # 20일 평균 거래량
+            vols_20 = [v for v in volumes[:20] if v > 0]
+            vol_ma20 = round(sum(vols_20)/len(vols_20)) if vols_20 else 0
+
+            # RSI(14)
+            def calc_rsi(cl, n=14):
+                if len(cl) < n+1: return 50
+                gains, losses = [], []
+                for j in range(1, n+1):
+                    d = cl[j-1] - cl[j]
+                    if d > 0: gains.append(d)
+                    else: losses.append(abs(d))
+                ag = sum(gains)/n if gains else 0
+                al = sum(losses)/n if losses else 0
+                return round(100 - 100/(1+ag/al)) if al > 0 else 100
+
+            rsi = calc_rsi(closes)
+
+            # MACD(10,25,7)
+            def ema_val(arr, n):
+                if len(arr) < n: return 0
+                k = 2/(n+1)
+                e = arr[-n]
+                for j in range(n-1, -1, -1):
+                    e = arr[j]*k + e*(1-k)
+                return e
+
+            ema10 = ema_val(closes, 10)
+            ema25 = ema_val(closes, 25)
+            macd_val = ema10 - ema25
+            macd_golden = macd_val > 0
+
+            # STO(5,3,3)
+            def calc_sto(hi, lo, cl, k=5):
+                if len(cl) < k: return 50
+                h = max([x for x in hi[:k] if x>0] or [1])
+                l = min([x for x in lo[:k] if x>0] or [0])
+                c = cl[0]
+                return round((c-l)/(h-l)*100) if h>l else 50
+
+            sto = calc_sto(highs, lows, closes)
+
+            # 캔들패턴
+            patterns = []
+            if len(closes) >= 3 and len(opens) >= 3:
+                c0,c1,c2 = closes[0],closes[1],closes[2]
+                o0,o1,o2 = opens[0],opens[1],opens[2]
+                h0,h1    = highs[0],highs[1]
+                l0,l1    = lows[0],lows[1]
+                body0 = abs(c0-o0); body1 = abs(c1-o1)
+                full0 = h0-l0 if h0>l0 else 1
+                if body0 < full0*0.1: patterns.append("도지")
+                if body0 < full0*0.1 and body1 < (h1-l1 if h1>l1 else 1)*0.1: patterns.append("쌍도지")
+                lw0 = min(c0,o0)-l0; uw0 = h0-max(c0,o0)
+                if lw0 >= body0*2 and uw0 < body0*0.5 and c0>o0: patterns.append("망치형")
+                if c1<o1 and c0>o0 and c0>o1 and o0<c1: patterns.append("상승장악형")
+                if c2>o2 and c1<o1 and c0>o0 and o1>c2 and c1<o2: patterns.append("양음양")
+                body2 = abs(c2-o2)
+                if c2<o2 and body1<(h1-l1 if h1>l1 else 1)*0.2 and c0>o0 and body0>body2*0.5: patterns.append("샛별형")
+                if c2>o2 and body1<(h1-l1 if h1>l1 else 1)*0.2 and c0<o0: patterns.append("저녁별형")
+
             price_now = abs(int(data.get("cur_prc", 0) or 0))
-            is_bullish = (ma5 > 0 and ma20 > 0 and ma60 > 0 and ma120 > 0 and ma200 > 0
-                          and ma5 > ma20 > ma60 > ma120 > ma200)
+            is_bullish = bool(ma5>0 and ma20>0 and ma60>0 and ma120>0 and ma200>0
+                              and ma5>ma20>ma60>ma120>ma200)
             above_120 = price_now > ma120 if ma120 > 0 else False
 
             results.append({
-                "code":      code,
-                "name":      name,
-                "market":    market,
-                "price":     price_now,
-                "chg_rate":  float(data.get("flu_rt", 0) or 0),
-                "volume":    int(data.get("trde_qty", 0) or 0),
-                "per":       float(data.get("per", 0) or 0),
-                "pbr":       float(data.get("pbr", 0) or 0),
-                "roe":       float(data.get("roe", 0) or 0),
-                "ma5":       ma5,
-                "ma20":      ma20,
-                "ma60":      ma60,
-                "ma120":     ma120,
-                "ma200":     ma200,
-                "is_bullish": is_bullish,
-                "above_120": above_120,
+                "code":        code,
+                "name":        name,
+                "market":      market,
+                "price":       price_now,
+                "chg_rate":    float(data.get("flu_rt", 0) or 0),
+                "volume":      int(data.get("trde_qty", 0) or 0),
+                "per":         float(data.get("per", 0) or 0),
+                "pbr":         float(data.get("pbr", 0) or 0),
+                "roe":         float(data.get("roe", 0) or 0),
+                "ma5":         ma5,
+                "ma20":        ma20,
+                "ma60":        ma60,
+                "ma120":       ma120,
+                "ma200":       ma200,
+                "vol_ma20":    vol_ma20,
+                "rsi":         rsi,
+                "sto":         sto,
+                "macd":        round(macd_val),
+                "macd_golden": macd_golden,
+                "patterns":    patterns,
+                "is_bullish":  is_bullish,
+                "above_120":   above_120,
             })
             scan_status["done"] += 1
 
         except Exception as e:
             scan_status["failed"] += 1
-            print(f"[스캔2단계] 실패 {code} {name}: {e}")
+            print(f"[스캔] 실패 {code} {name}: {e}")
 
         if (i + 1) % 100 == 0:
             _save_results(results)
-            print(f"[스캔2단계] {i+1}/{len(targets)} ({scan_status['done']}성공/{scan_status['failed']}실패)")
+            print(f"[스캔] {i+1}/{len(targets)} ({scan_status['done']}성공/{scan_status['failed']}실패)")
 
     _save_results(results)
     scan_status["running"] = False
     scan_status["finished"] = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-    print(f"[스캔2단계] 완료! {scan_status['done']}개 수집")
-    # 이평선 백그라운드 수집 자동 시작
-    t = threading.Thread(target=collect_ma_thread, daemon=True)
-    t.start()
+    print(f"[스캔] 완료! {scan_status['done']}개 수집")
 
 @app.get("/scan/collect")
 def start_scan_collect():
