@@ -19,6 +19,8 @@ from fastapi.middleware.cors import CORSMiddleware
 APP_KEY    = "YeM3eYR7rbR_Qme-d8K1FLBq-V3LsO3ctAiv2bplFEs"
 APP_SECRET = "6OxwAIe7c0cn6ghfhVe0kaVdPLSH9WY3qwB7qtubbJc"
 BASE_URL   = "https://api.kiwoom.com"
+DART_KEY   = "8043a5f072b9e0258e060acc378387853099c9eb"
+DART_URL   = "https://opendart.fss.or.kr/api"
 
 app = FastAPI(title="StockScan Server v2")
 
@@ -178,6 +180,80 @@ def get_all_sectors():
 def get_sector(code: str):
     """업종현재가 (ka20001)"""
     return api_call("ka20001", {"inds_cd": code})
+
+@app.get("/dart/finance/{code}")
+def get_dart_finance(code: str):
+    """DART 재무데이터 조회 — 매출/영업이익/현금흐름/감사의견"""
+    try:
+        # 1) 기업 고유번호 조회
+        corp_res = requests.get(
+            f"{DART_URL}/company.json",
+            params={"crtfc_key": DART_KEY, "stock_code": code},
+            timeout=5
+        )
+        corp_data = corp_res.json()
+        corp_code = corp_data.get("corp_code")
+        if not corp_code:
+            return {"success": False, "message": "기업코드 없음"}
+
+        # 2) 최근 재무제표 조회 (단일회사 주요계정)
+        year = datetime.now().year
+        fin_res = requests.get(
+            f"{DART_URL}/fnlttSinglAcntAll.json",
+            params={
+                "crtfc_key": DART_KEY,
+                "corp_code": corp_code,
+                "bsns_year": str(year - 1),
+                "reprt_code": "11011",  # 사업보고서
+                "fs_div": "CFS"  # 연결재무제표
+            },
+            timeout=10
+        )
+        fin_data = fin_res.json()
+        items = fin_data.get("list", [])
+
+        result = {
+            "revenue": None,
+            "revenue_prev": None,
+            "op_income": None,
+            "op_income_prev": None,
+            "op_cashflow": None,
+            "revenue_growth": None,
+            "op_growth": None,
+            "cashflow_ok": None,
+        }
+
+        for item in items:
+            nm = item.get("account_nm", "")
+            amt = item.get("thstrm_amount", "0") or "0"
+            amt_prev = item.get("frmtrm_amount", "0") or "0"
+            try:
+                amt = int(amt.replace(",", "").replace("-", "0"))
+                amt_prev = int(amt_prev.replace(",", "").replace("-", "0"))
+            except:
+                continue
+
+            if "매출" in nm and "원가" not in nm and result["revenue"] is None:
+                result["revenue"] = amt
+                result["revenue_prev"] = amt_prev
+            elif "영업이익" in nm and result["op_income"] is None:
+                result["op_income"] = amt
+                result["op_income_prev"] = amt_prev
+            elif "영업활동" in nm and "현금" in nm and result["op_cashflow"] is None:
+                result["op_cashflow"] = amt
+
+        # 성장률 계산
+        if result["revenue"] and result["revenue_prev"] and result["revenue_prev"] > 0:
+            result["revenue_growth"] = round((result["revenue"] - result["revenue_prev"]) / result["revenue_prev"] * 100, 1)
+        if result["op_income"] and result["op_income_prev"] and result["op_income_prev"] > 0:
+            result["op_growth"] = round((result["op_income"] - result["op_income_prev"]) / result["op_income_prev"] * 100, 1)
+        if result["op_cashflow"] and result["op_income"]:
+            result["cashflow_ok"] = result["op_cashflow"] > result["op_income"]
+
+        return {"success": True, "corp_code": corp_code, **result}
+
+    except Exception as e:
+        return {"success": False, "error": str(e)}
 
 @app.get("/market/status")
 def get_market_status():
