@@ -1180,6 +1180,19 @@ function updatePassPanel(s){
     if(name==='4단계제외') return !(s.price<s.ma200&&s.ma200>0&&s.ma60<s.ma120) ? 'ok' : 'fail';
     if(name==='시장상승') return MARKET_STATUS.market_up===true?'ok':MARKET_STATUS.market_up===false?'fail':'na';
     if(name==='거래량폭발') return s.vol_ma20>0&&s.volume>=s.vol_ma20*2 ? 'ok' : s.vol_ma20===0 ? 'na' : 'fail';
+    // 5단계 보조지표
+    if(name==='RSI침체') return s.rsi>0&&s.rsi!==50 ? (s.rsi<=30?'ok':'fail') : 'na';
+    if(name==='RSI과열') return s.rsi>0&&s.rsi!==50 ? (s.rsi>=70?'ok':'fail') : 'na';
+    if(name==='STO침체') return s.sto>0&&s.sto!==50 ? (s.sto<=20?'ok':'fail') : 'na';
+    if(name==='STO과열') return s.sto>0&&s.sto!==50 ? (s.sto>=80?'ok':'fail') : 'na';
+    if(name==='MACD골크') return s.macd_golden===true?'ok':s.macd_golden===false?'fail':'na';
+    // 4단계 캔들패턴
+    if(name==='쌍도지') return s.patterns&&s.patterns.length>0 ? (s.patterns.includes('쌍도지')?'ok':'fail') : 'na';
+    if(name==='망치형') return s.patterns&&s.patterns.length>0 ? (s.patterns.includes('망치형')?'ok':'fail') : 'na';
+    if(name==='상승장악형') return s.patterns&&s.patterns.length>0 ? (s.patterns.includes('상승장악형')?'ok':'fail') : 'na';
+    if(name==='양음양') return s.patterns&&s.patterns.length>0 ? (s.patterns.includes('양음양')?'ok':'fail') : 'na';
+    if(name==='샛별형') return s.patterns&&s.patterns.length>0 ? (s.patterns.includes('샛별형')?'ok':'fail') : 'na';
+    if(name==='저녁별형') return s.patterns&&s.patterns.length>0 ? (s.patterns.includes('저녁별형')?'ok':'fail') : 'na';
     return 'na';
   }
 
