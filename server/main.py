@@ -290,6 +290,12 @@ def _auto_collect_on_startup():
             updated = saved.get("updated", "")
             if updated.startswith(datetime.now().strftime("%Y-%m-%d")):
                 print(f"[자동수집] 오늘 이미 수집 완료 ({updated}). 건너뜀.")
+                # 이평선 미수집 시 이평선만 자동 시작
+                ma_updated = saved.get("ma_updated", "")
+                if not ma_updated.startswith(datetime.now().strftime("%Y-%m-%d")):
+                    print(f"[자동수집] 이평선 미수집 — 이평선 수집 시작")
+                    t = threading.Thread(target=collect_ma_thread, daemon=True)
+                    t.start()
                 return
         except:
             pass
