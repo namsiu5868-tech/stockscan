@@ -711,6 +711,26 @@ def collect_basic_data_thread():
                 gold_score += 1
             gold_line = gold_score >= 2  # 2개이상 겹치면 골드라인
 
+            # N자형 — 상승→조정(거래량감소)→재상승 패턴
+            n_shape = False
+            if len(closes) >= 15 and len(volumes) >= 15:
+                # 최근 15봉 중 고점/저점 탐색
+                recent_c = closes[:15]
+                recent_v = volumes[:15]
+                peak_idx = recent_c.index(max(recent_c[1:8]))  # 중간 고점
+                if 1 <= peak_idx <= 7:
+                    before_peak = recent_c[peak_idx+1:peak_idx+5]  # 고점 이전(최신순)
+                    after_peak  = recent_c[:peak_idx]               # 고점 이후(최신)
+                    vol_peak    = recent_v[peak_idx+1:peak_idx+5]
+                    vol_after   = recent_v[:peak_idx]
+                    if before_peak and after_peak and vol_peak and vol_after:
+                        rising = recent_c[peak_idx] > before_peak[-1]            # 상승
+                        pullback = after_peak[-1] < recent_c[peak_idx]           # 조정
+                        low_higher = after_peak[-1] > before_peak[-1]            # 저점 상향
+                        vol_down = sum(vol_after)/len(vol_after) < sum(vol_peak)/len(vol_peak)  # 거래량감소
+                        recovering = closes[0] > after_peak[-1]                  # 재상승
+                        n_shape = rising and pullback and low_higher and vol_down and recovering
+
             results.append({
                 "code":        code,
                 "name":        name,
@@ -737,6 +757,7 @@ def collect_basic_data_thread():
                 "fibo_382":    fibo_382,
                 "double_bottom": double_bottom,
                 "gold_line":   gold_line,
+                "n_shape":     n_shape,
             })
             scan_status["done"] += 1
 
