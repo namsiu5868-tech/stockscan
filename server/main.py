@@ -684,6 +684,33 @@ def collect_basic_data_thread():
                         diff = abs(low1 - low2) / max(low1, low2)
                         double_bottom = diff < 0.03 and price_now > max(low1, low2) * 1.02
 
+            # 골드라인 — 이평선+피보나치+지지저항 2개이상 겹치는 자리
+            def near(a, b, pct=0.02):
+                return abs(a-b)/b < pct if b > 0 else False
+
+            # 지지저항: 최근 60일 고점/저점 중 2회이상 터치된 가격대
+            sr_levels = []
+            if len(closes) >= 10:
+                for j in range(2, min(60, len(closes))-2):
+                    # 로컬 고점
+                    if highs[j] > 0 and highs[j] >= highs[j-1] and highs[j] >= highs[j+1] and highs[j] >= highs[j-2] and highs[j] >= highs[j+2]:
+                        sr_levels.append(highs[j])
+                    # 로컬 저점
+                    if lows[j] > 0 and lows[j] <= lows[j-1] and lows[j] <= lows[j+1] and lows[j] <= lows[j-2] and lows[j] <= lows[j+2]:
+                        sr_levels.append(lows[j])
+
+            near_sr = any(near(price_now, lv, 0.02) for lv in sr_levels) if sr_levels else False
+
+            # 골드라인 조건 카운트
+            gold_score = 0
+            if near(price_now, ma20, 0.02) or near(price_now, ma60, 0.02) or near(price_now, ma120, 0.02):
+                gold_score += 1
+            if fibo_382:
+                gold_score += 1
+            if near_sr:
+                gold_score += 1
+            gold_line = gold_score >= 2  # 2개이상 겹치면 골드라인
+
             results.append({
                 "code":        code,
                 "name":        name,
@@ -709,6 +736,7 @@ def collect_basic_data_thread():
                 "above_120":   above_120,
                 "fibo_382":    fibo_382,
                 "double_bottom": double_bottom,
+                "gold_line":   gold_line,
             })
             scan_status["done"] += 1
 
