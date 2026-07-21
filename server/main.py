@@ -731,6 +731,20 @@ def collect_basic_data_thread():
                         recovering = closes[0] > after_peak[-1]                  # 재상승
                         n_shape = rising and pullback and low_higher and vol_down and recovering
 
+            # 박스돌파 — 횡보 후 상단 돌파 + 거래량 동반
+            box_breakout = False
+            if len(closes) >= 25 and len(volumes) >= 25:
+                box_closes = [x for x in closes[1:21] if x > 0]  # 직전 20봉 (어제 기준)
+                if box_closes:
+                    box_high = max(box_closes)
+                    box_low  = min(box_closes)
+                    box_range = (box_high - box_low) / box_low if box_low > 0 else 1
+                    vol_avg = sum([v for v in volumes[1:21] if v > 0]) / 20
+                    # 박스권(범위 10%이내) + 오늘 상단 돌파 + 거래량 1.5배이상
+                    box_breakout = (box_range < 0.10 and
+                                   closes[0] > box_high * 1.005 and
+                                   volumes[0] > vol_avg * 1.5)
+
             results.append({
                 "code":        code,
                 "name":        name,
@@ -758,6 +772,7 @@ def collect_basic_data_thread():
                 "double_bottom": double_bottom,
                 "gold_line":   gold_line,
                 "n_shape":     n_shape,
+                "box_breakout": box_breakout,
             })
             scan_status["done"] += 1
 

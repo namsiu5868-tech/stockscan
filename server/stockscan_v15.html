@@ -740,6 +740,7 @@ function applyFilterAndRender(){
       if(activeButtons.includes('이중바닥'))     checks.push(s.double_bottom===true);
       if(activeButtons.includes('골드라인'))     checks.push(s.gold_line===true);
       if(activeButtons.includes('N자형'))        checks.push(s.n_shape===true);
+      if(activeButtons.includes('박스돌파'))     checks.push(s.box_breakout===true);
       // 5단계 보조지표
       if(activeButtons.includes('RSI침체'))     checks.push(s.rsi>0&&s.rsi<=30);
       if(activeButtons.includes('RSI과열'))     checks.push(s.rsi>=70);
@@ -924,6 +925,7 @@ async function startScan(){
         double_bottom: item.double_bottom || false,
         gold_line: item.gold_line || false,
         n_shape: item.n_shape || false,
+        box_breakout: item.box_breakout || false,
         vol: item.volume ? (item.volume/10000).toFixed(0)+'만주' : '-',
         rs: 50,
         stage: 2,
@@ -1189,6 +1191,7 @@ function updatePassPanel(s){
     if(name==='이중바닥') return s.double_bottom===true?'ok':s.double_bottom===false&&s.ma5>0?'fail':'na';
     if(name==='골드라인') return s.gold_line===true?'ok':s.gold_line===false&&s.ma5>0?'fail':'na';
     if(name==='N자형') return s.n_shape===true?'ok':s.n_shape===false&&s.ma5>0?'fail':'na';
+    if(name==='박스돌파') return s.box_breakout===true?'ok':s.box_breakout===false&&s.ma5>0?'fail':'na';
     // 5단계 보조지표
     if(name==='RSI침체') return s.rsi>0&&s.rsi!==50 ? (s.rsi<=30?'ok':'fail') : 'na';
     if(name==='RSI과열') return s.rsi>0&&s.rsi!==50 ? (s.rsi>=70?'ok':'fail') : 'na';
