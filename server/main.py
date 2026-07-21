@@ -707,9 +707,13 @@ def collect_ma_thread():
             chart = res.json()
             candles = chart.get("output2") or chart.get("output") or []
             closes = []
+            volumes = []
             for c in candles:
                 p = c.get("cur_prc") or c.get("stck_clpr") or 0
+                v = c.get("trde_qty") or 0
                 try: closes.append(abs(int(str(p).replace(",", ""))))
+                except: pass
+                try: volumes.append(abs(int(str(v).replace(",", ""))))
                 except: pass
             closes = [p for p in closes if p > 0]
 
@@ -721,6 +725,11 @@ def collect_ma_thread():
             stock["ma60"]  = ma(60)
             stock["ma120"] = ma(120)
             stock["ma200"] = ma(200)
+
+            # 20일 평균 거래량
+            vols_20 = [v for v in volumes[:20] if v > 0]
+            stock["vol_ma20"] = round(sum(vols_20) / len(vols_20)) if vols_20 else 0
+
             price = stock.get("price", 0)
             stock["is_bullish"] = bool(
                 stock["ma5"] > 0 and stock["ma20"] > 0 and stock["ma60"] > 0 and

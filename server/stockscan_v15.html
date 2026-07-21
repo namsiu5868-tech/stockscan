@@ -721,7 +721,7 @@ function applyFilterAndRender(){
       if(activeButtons.includes('정배열'))    checks.push(s.ma5>0&&s.ma20>0&&s.ma60>0&&s.ma120>0&&s.ma5>s.ma20&&s.ma20>s.ma60&&s.ma60>s.ma120);
       if(activeButtons.includes('120일↑'))    checks.push(s.price>s.ma120&&s.ma120>0);
       if(activeButtons.includes('골든크로스'))checks.push(s.ma5>s.ma20&&s.ma20>0);
-      if(activeButtons.includes('수정초'))    checks.push(s.ma5>0&&s.ma20>0&&Math.abs(s.ma5-s.ma20)/s.ma20<0.03);
+      if(activeButtons.includes('거래량폭발'))checks.push(s.vol_ma20>0 && s.volume >= s.vol_ma20*2);
 
       if(checks.length === 0) return true;
       return checks.some(r=>r);
@@ -884,7 +884,7 @@ async function startScan(){
         code: item.code || '-',
         price: price,
         change: change,
-        volume: item.volume || 0,
+        vol_ma20: item.vol_ma20 || 0,
         vol: item.volume ? (item.volume/10000).toFixed(0)+'만주' : '-',
         rs: 50,
         stage: 2,
@@ -1146,7 +1146,7 @@ function updatePassPanel(s){
     if(name==='수정초') return s.ma5>0&&s.ma20>0&&Math.abs(s.ma5-s.ma20)/s.ma20<0.03 ? 'ok' : 'fail';
     if(name==='4단계제외') return !(s.price<s.ma200&&s.ma200>0&&s.ma60<s.ma120) ? 'ok' : 'fail';
     if(name==='시장상승') return MARKET_STATUS.market_up===true?'ok':MARKET_STATUS.market_up===false?'fail':'na';
-    if(name==='거래량폭발') return s.volume>0 ? 'ok' : 'na';
+    if(name==='거래량폭발') return s.vol_ma20>0&&s.volume>=s.vol_ma20*2 ? 'ok' : s.vol_ma20===0 ? 'na' : 'fail';
     return 'na';
   }
 
