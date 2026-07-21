@@ -671,6 +671,7 @@ const API = 'http://localhost:8000';
 // ─── 상태 ─────────────────────────────────────────
 let STOCKS = [];
 let FILTERED_STOCKS = [];
+let MARKET_STATUS = { market_up: null, kospi: {}, kosdaq: {} };
 let selIdx = null;
 let selCode = null;
 let charts = {main:null,vol:null,rsi:null,macd:null,sto:null};
@@ -703,12 +704,16 @@ function applyFilterAndRender(){
 
   if(activeButtons.length > 0){
     filtered = STOCKS.filter(s => {
-      // 4단계제외 — AND 방식 (제외 조건)
+      // 4단계제외 — AND 방식
       if(activeButtons.includes('4단계제외')){
         if(s.price < s.ma200 && s.ma200 > 0 && s.ma60 < s.ma120) return false;
       }
+      // 시장상승 — AND 방식 (시장 전체 조건)
+      if(activeButtons.includes('시장상승')){
+        if(MARKET_STATUS.market_up === false) return false;
+      }
 
-      // 나머지 조건 — 선택된 것 중 하나라도 통과하면 포함 (OR)
+      // 나머지 조건 — OR
       const checks = [];
       if(activeButtons.includes('RS80↑'))     checks.push(s.rs >= 80);
       if(activeButtons.includes('상대강도↑')) checks.push(s.rs >= 60);
@@ -834,6 +839,18 @@ async function startScan(){
 
   try {
     msg.textContent='수집된 전종목 데이터 불러오는 중...';
+    bar.style.width='20%';
+
+    // 시장상태 먼저 조회
+    try {
+      const mres = await fetch(`${API}/market/status`);
+      const mdata = await mres.json();
+      MARKET_STATUS = mdata;
+      console.log('[시장상태]', mdata.market_up ? '상승장' : '하락장/조정');
+    } catch(e) {
+      MARKET_STATUS = { market_up: null };
+    }
+
     bar.style.width='30%';
 
     const res = await fetch(`${API}/scan/result`);
@@ -1123,8 +1140,14 @@ function updatePassPanel(s){
     if(name==='정배열') return s.ma5>0&&s.ma20>0&&s.ma60>0&&s.ma120>0&&s.ma5>s.ma20&&s.ma20>s.ma60&&s.ma60>s.ma120 ? 'ok' : 'fail';
     if(name==='120일↑') return s.price>s.ma120&&s.ma120>0 ? 'ok' : 'fail';
     if(name==='RS80↑') return s.rs>=80 ? 'ok' : 'fail';
-    if(name==='거래량폭발') return s.volume>0 ? 'ok' : 'na'; // 추후 평균대비 계산
-    return 'na'; // 미구현
+    if(name==='상대강도↑') return s.rs>=60 ? 'ok' : 'fail';
+    if(name==='와인2단계') return s.ma5>0&&s.ma20>0&&s.ma5>s.ma20&&s.price>s.ma20 ? 'ok' : 'fail';
+    if(name==='골든크로스') return s.ma5>s.ma20&&s.ma20>0 ? 'ok' : 'fail';
+    if(name==='수정초') return s.ma5>0&&s.ma20>0&&Math.abs(s.ma5-s.ma20)/s.ma20<0.03 ? 'ok' : 'fail';
+    if(name==='4단계제외') return !(s.price<s.ma200&&s.ma200>0&&s.ma60<s.ma120) ? 'ok' : 'fail';
+    if(name==='시장상승') return MARKET_STATUS.market_up===true?'ok':MARKET_STATUS.market_up===false?'fail':'na';
+    if(name==='거래량폭발') return s.volume>0 ? 'ok' : 'na';
+    return 'na';
   }
 
   for(let i=1;i<=5;i++){

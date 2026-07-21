@@ -179,6 +179,67 @@ def get_sector(code: str):
     """업종현재가 (ka20001)"""
     return api_call("ka20001", {"inds_cd": code})
 
+@app.get("/market/status")
+def get_market_status():
+    """시장상승 여부 판단 — 코스피/코스닥 20일선 비교"""
+    try:
+        today = datetime.now().strftime("%Y%m%d")
+        result = {}
+
+        for mkt_name, inds_cd in [("kospi", "001"), ("kosdaq", "101")]:
+            # 일봉차트 조회 (ka10081 대신 업종차트 ka20002 사용)
+            token = get_token()
+            headers = {
+                "Content-Type": "application/json;charset=UTF-8",
+                "authorization": f"Bearer {token}",
+                "appkey": APP_KEY, "secretkey": APP_SECRET,
+                "api-id": "ka20002",
+            }
+            res = requests.post(
+                BASE_URL + "/api/dostk/sect",
+                headers=headers,
+                json={"inds_cd": inds_cd, "base_dt": today, "upd_stkpc_tp": "0"},
+                timeout=5
+            )
+            data = res.json()
+
+            candles = data.get("output2") or data.get("output") or []
+            closes = []
+            for c in candles:
+                p = c.get("cur_prc") or c.get("clpr") or 0
+                try:
+                    closes.append(abs(float(str(p).replace(",", ""))))
+                except:
+                    pass
+            closes = [p for p in closes if p > 0]
+
+            cur = closes[0] if closes else 0
+            ma20 = sum(closes[:20]) / 20 if len(closes) >= 20 else 0
+            ma20_prev = sum(closes[1:21]) / 20 if len(closes) >= 21 else 0
+
+            rising = ma20 > ma20_prev  # 20일선 우상향
+            above = cur > ma20         # 현재가 > 20일선
+
+            result[mkt_name] = {
+                "current": cur,
+                "ma20": round(ma20, 2),
+                "above_ma20": above,
+                "ma20_rising": rising,
+                "bullish": above and rising
+            }
+
+        both_bullish = result.get("kospi", {}).get("bullish", False) and \
+                       result.get("kosdaq", {}).get("bullish", False)
+
+        return {
+            "success": True,
+            "market_up": both_bullish,
+            "kospi": result.get("kospi", {}),
+            "kosdaq": result.get("kosdaq", {}),
+        }
+    except Exception as e:
+        return {"success": False, "error": str(e), "market_up": False}
+
 # ──────────────────────────────────────
 # 뉴스 (네이버 크롤링)
 # ──────────────────────────────────────
