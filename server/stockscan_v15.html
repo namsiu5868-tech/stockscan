@@ -32,7 +32,7 @@ setInterval(checkServer, 5000);
   --accent:#4da6ff;--accent2:#34d399;--gold:#fbbf24;
   --danger:#f87171;--warn:#fb923c;--purple:#a78bfa;
   --text:#f8fafc;--text2:#e2e8f0;--text3:#94a3b8;
-  --buy:#34d399;--sell:#f87171;--card:#1a2744;
+  --buy:#ff3333;--sell:#3399ff;--card:#1a2744;
   --hdr-bg:#0f1829;
 }
 *{box-sizing:border-box;margin:0;padding:0}
@@ -46,7 +46,7 @@ body{background:var(--bg);color:var(--text);font-family:'Noto Sans KR',sans-seri
 .mkt-item{text-align:right}
 .mkt-name{font-size:9px;color:#ffffff;letter-spacing:1px;font-weight:600}
 .mkt-val{font-family:'JetBrains Mono',monospace;font-size:12px;font-weight:700;color:#ffffff}
-.up{color:#34d399}.dn{color:#f87171}
+.up{color:#ff3333}.dn{color:#3399ff}
 .hdr-right{display:flex;align-items:center;gap:8px}
 .scan-btn{padding:7px 18px;background:linear-gradient(135deg,#4da6ff,#2563eb);border:none;border-radius:6px;color:#fff;font-weight:700;font-size:12px;cursor:pointer;font-family:'Noto Sans KR',sans-serif;transition:all .2s;box-shadow:0 2px 8px rgba(77,166,255,.35)}
 .scan-btn:hover{transform:translateY(-1px);box-shadow:0 4px 16px rgba(77,166,255,.5)}
@@ -331,7 +331,10 @@ body{background:var(--bg);color:var(--text);font-family:'Noto Sans KR',sans-seri
     <div class="mkt-item"><div class="mkt-name">KOSDAQ</div><div class="mkt-val dn">842 <span style="font-size:8px">-0.18%</span></div></div>
     <div class="mkt-item"><div class="mkt-name">주도섹터</div><div class="mkt-val" style="color:var(--gold);font-size:10px">반도체 +2.1%</div></div>
     <div class="mkt-item"><div class="mkt-name">갱신</div><div class="mkt-val" style="color:#ffffff;font-size:9px" id="lastUp">-</div></div>
-    <div class="mkt-item" style="display:flex;align-items:center;gap:7px;margin-left:16px">
+    <div class="mkt-item" style="display:flex;align-items:center;gap:5px;margin-left:8px">
+      <span id="collectStatus" style="font-size:10px;color:#94a3b8;font-weight:600">-</span>
+    </div>
+    <div class="mkt-item" style="display:flex;align-items:center;gap:7px;margin-left:8px">
       <span id="serverDot" style="width:13px;height:13px;border-radius:50%;background:#666;display:inline-block;transition:background .3s;flex-shrink:0"></span>
       <span id="serverStatus" style="font-size:12px;font-weight:700;color:#ffffff">서버확인중</span>
     </div>
@@ -1713,6 +1716,32 @@ async function checkServer(){
 }
 checkServer();
 setInterval(checkServer, 5000);
+
+async function checkCollectStatus(){
+  try {
+    const res = await fetch(`${API}/scan/status`, {signal: AbortSignal.timeout(2000)});
+    const data = await res.json();
+    const el = document.getElementById('collectStatus');
+    if(!el) return;
+    if(data.running){
+      el.style.color = '#fbbf24';
+      el.textContent = `⏳ 기본수집 ${data.percent}`;
+    } else if(data.ma_running){
+      el.style.color = '#4da6ff';
+      el.textContent = `⏳ 이평선수집 ${data.ma_percent}`;
+    } else if(data.ma_finished){
+      el.style.color = '#34d399';
+      el.textContent = `✅ 이평선완료 ${data.ma_finished.slice(11,16)}`;
+    } else if(data.finished){
+      el.style.color = '#94a3b8';
+      el.textContent = `● 기본수집완료`;
+    } else {
+      el.textContent = '';
+    }
+  } catch(e) {}
+}
+setInterval(checkCollectStatus, 3000);
+checkCollectStatus();
 
 </script>
 </body>

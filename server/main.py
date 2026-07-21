@@ -419,6 +419,12 @@ scan_status = {
     "started": None,
     "finished": None,
     "error": None,
+    # 이평선 백그라운드 수집
+    "ma_running": False,
+    "ma_total": 0,
+    "ma_done": 0,
+    "ma_started": None,
+    "ma_finished": None,
 }
 
 DATA_DIR  = os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "data")
@@ -549,6 +555,9 @@ def collect_basic_data_thread():
     scan_status["running"] = False
     scan_status["finished"] = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
     print(f"[스캔2단계] 완료! {scan_status['done']}개 수집")
+    # 이평선 백그라운드 수집 자동 시작
+    t = threading.Thread(target=collect_ma_thread, daemon=True)
+    t.start()
 
 @app.get("/scan/collect")
 def start_scan_collect():
@@ -571,16 +580,122 @@ def start_scan_collect():
 def get_scan_status():
     """수집 진행상황 확인"""
     pct = round(scan_status["done"] / scan_status["total"] * 100, 1) if scan_status["total"] > 0 else 0
+    ma_pct = round(scan_status["ma_done"] / scan_status["ma_total"] * 100, 1) if scan_status["ma_total"] > 0 else 0
     return {
-        "running":  scan_status["running"],
-        "total":    scan_status["total"],
-        "done":     scan_status["done"],
-        "failed":   scan_status["failed"],
-        "percent":  f"{pct}%",
-        "started":  scan_status["started"],
-        "finished": scan_status["finished"],
-        "error":    scan_status["error"],
+        "running":     scan_status["running"],
+        "total":       scan_status["total"],
+        "done":        scan_status["done"],
+        "failed":      scan_status["failed"],
+        "percent":     f"{pct}%",
+        "started":     scan_status["started"],
+        "finished":    scan_status["finished"],
+        "error":       scan_status["error"],
+        "ma_running":  scan_status["ma_running"],
+        "ma_total":    scan_status["ma_total"],
+        "ma_done":     scan_status["ma_done"],
+        "ma_percent":  f"{ma_pct}%",
+        "ma_started":  scan_status["ma_started"],
+        "ma_finished": scan_status["ma_finished"],
     }
+
+# ── 이평선 백그라운드 수집 ──────────────────────────
+def collect_ma_thread():
+    """기본데이터 수집 완료 후 이평선 백그라운드 수집"""
+    if not os.path.exists(DATA_FILE):
+        return
+
+    with open(DATA_FILE, "r", encoding="utf-8") as f:
+        saved = json.load(f)
+    stocks = saved.get("data", [])
+
+    scan_status["ma_running"] = True
+    scan_status["ma_total"] = len(stocks)
+    scan_status["ma_done"] = 0
+    scan_status["ma_started"] = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+    scan_status["ma_finished"] = None
+    print(f"[이평선수집] 시작: {len(stocks)}개")
+
+    today = datetime.now().strftime("%Y%m%d")
+
+    for i, stock in enumerate(stocks):
+        code = stock["code"]
+        # 이미 이평선 있으면 건너뜀
+        if stock.get("ma5", 0) > 0:
+            scan_status["ma_done"] += 1
+            continue
+        try:
+            token = get_token()
+            headers = {
+                "Content-Type": "application/json;charset=UTF-8",
+                "authorization": f"Bearer {token}",
+                "appkey": APP_KEY, "secretkey": APP_SECRET,
+                "api-id": "ka10081",
+            }
+            res = requests.post(
+                BASE_URL + "/api/dostk/chart",
+                headers=headers,
+                json={"stk_cd": code, "base_dt": today, "upd_stkpc_tp": "0"},
+                timeout=5
+            )
+            chart = res.json()
+            candles = chart.get("output2") or chart.get("output") or []
+            closes = []
+            for c in candles:
+                p = c.get("cur_prc") or c.get("stck_clpr") or 0
+                try: closes.append(abs(int(str(p).replace(",", ""))))
+                except: pass
+            closes = [p for p in closes if p > 0]
+
+            def ma(n):
+                return round(sum(closes[:n]) / n) if len(closes) >= n else 0
+
+            stock["ma5"]   = ma(5)
+            stock["ma20"]  = ma(20)
+            stock["ma60"]  = ma(60)
+            stock["ma120"] = ma(120)
+            stock["ma200"] = ma(200)
+            price = stock.get("price", 0)
+            stock["is_bullish"] = bool(
+                stock["ma5"] > 0 and stock["ma20"] > 0 and stock["ma60"] > 0 and
+                stock["ma120"] > 0 and stock["ma200"] > 0 and
+                stock["ma5"] > stock["ma20"] > stock["ma60"] > stock["ma120"] > stock["ma200"]
+            )
+            stock["above_120"] = price > stock["ma120"] if stock["ma120"] > 0 else False
+
+            scan_status["ma_done"] += 1
+
+        except Exception as e:
+            scan_status["ma_done"] += 1
+
+        time.sleep(0.21)
+
+        if (i + 1) % 200 == 0:
+            # 중간 저장
+            saved["data"] = stocks
+            saved["ma_updated"] = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+            with open(DATA_FILE, "w", encoding="utf-8") as f:
+                json.dump(saved, f, ensure_ascii=False)
+            print(f"[이평선수집] {i+1}/{len(stocks)} ({scan_status['ma_done']}완료)")
+
+    # 최종 저장
+    saved["data"] = stocks
+    saved["ma_updated"] = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+    with open(DATA_FILE, "w", encoding="utf-8") as f:
+        json.dump(saved, f, ensure_ascii=False)
+
+    scan_status["ma_running"] = False
+    scan_status["ma_finished"] = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+    print(f"[이평선수집] 완료! {scan_status['ma_done']}개")
+
+@app.get("/scan/ma-collect")
+def start_ma_collect():
+    """이평선 수집 수동 시작"""
+    if scan_status["ma_running"]:
+        return {"success": False, "message": f"이평선 수집 중 ({scan_status['ma_done']}/{scan_status['ma_total']})"}
+    t = threading.Thread(target=collect_ma_thread, daemon=True)
+    t.start()
+    return {"success": True, "message": "이평선 수집 시작. /scan/status 로 확인하세요."}
+
 
 @app.get("/scan/result")
 def get_scan_result():
