@@ -735,8 +735,8 @@ function applyFilterAndRender(){
       if(activeButtons.includes('와인2단계')) checks.push(s.ma5>0&&s.ma20>0&&s.ma5>s.ma20&&s.price>s.ma20);
       if(activeButtons.includes('정배열'))    checks.push(s.ma5>0&&s.ma20>0&&s.ma60>0&&s.ma120>0&&s.ma5>s.ma20&&s.ma20>s.ma60&&s.ma60>s.ma120);
       if(activeButtons.includes('120일↑'))    checks.push(s.price>s.ma120&&s.ma120>0);
-      if(activeButtons.includes('골든크로스'))checks.push(s.ma5>s.ma20&&s.ma20>0);
-      if(activeButtons.includes('거래량폭발'))checks.push(s.vol_ma20>0 && s.volume >= s.vol_ma20*2);
+      if(activeButtons.includes('수정초'))      checks.push(s.ma5>0&&s.ma20>0&&Math.abs(s.ma5-s.ma20)/s.ma20<0.03);
+      if(activeButtons.includes('거래량폭발'))  checks.push(s.vol_ma20>0&&s.volume>=s.vol_ma20*2);
 
       if(checks.length === 0) return true;
       return checks.some(r=>r);
