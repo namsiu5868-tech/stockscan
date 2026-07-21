@@ -707,36 +707,128 @@ def collect_ma_thread():
             chart = res.json()
             candles = chart.get("output2") or chart.get("output") or []
             closes = []
+            opens  = []
+            highs  = []
+            lows   = []
             volumes = []
             for c in candles:
-                p = c.get("cur_prc") or c.get("stck_clpr") or 0
-                v = c.get("trde_qty") or 0
-                try: closes.append(abs(int(str(p).replace(",", ""))))
-                except: pass
-                try: volumes.append(abs(int(str(v).replace(",", ""))))
-                except: pass
-            closes = [p for p in closes if p > 0]
+                p  = c.get("cur_prc") or c.get("stck_clpr") or 0
+                op = c.get("open_prc") or c.get("stck_oprc") or 0
+                hi = c.get("high_prc") or c.get("stck_hgpr") or 0
+                lo = c.get("low_prc")  or c.get("stck_lwpr") or 0
+                v  = c.get("trde_qty") or 0
+                try: closes.append(abs(int(str(p).replace(",",""))))
+                except: closes.append(0)
+                try: opens.append(abs(int(str(op).replace(",",""))))
+                except: opens.append(0)
+                try: highs.append(abs(int(str(hi).replace(",",""))))
+                except: highs.append(0)
+                try: lows.append(abs(int(str(lo).replace(",",""))))
+                except: lows.append(0)
+                try: volumes.append(abs(int(str(v).replace(",",""))))
+                except: volumes.append(0)
 
-            def ma(n):
-                return round(sum(closes[:n]) / n) if len(closes) >= n else 0
+            closes_f = [p for p in closes if p > 0]
 
-            stock["ma5"]   = ma(5)
-            stock["ma20"]  = ma(20)
-            stock["ma60"]  = ma(60)
-            stock["ma120"] = ma(120)
-            stock["ma200"] = ma(200)
+            def ma(arr, n):
+                a = [x for x in arr[:n] if x > 0]
+                return round(sum(a)/len(a)) if len(a)>=n else 0
+
+            stock["ma5"]   = ma(closes, 5)
+            stock["ma20"]  = ma(closes, 20)
+            stock["ma60"]  = ma(closes, 60)
+            stock["ma120"] = ma(closes, 120)
+            stock["ma200"] = ma(closes, 200)
 
             # 20일 평균 거래량
             vols_20 = [v for v in volumes[:20] if v > 0]
-            stock["vol_ma20"] = round(sum(vols_20) / len(vols_20)) if vols_20 else 0
+            stock["vol_ma20"] = round(sum(vols_20)/len(vols_20)) if vols_20 else 0
+
+            # RSI(14)
+            def calc_rsi(closes, n=14):
+                if len(closes) < n+1: return 50
+                gains, losses = [], []
+                for i in range(1, n+1):
+                    d = closes[i-1] - closes[i]  # 최신순이라 역방향
+                    if d > 0: gains.append(d)
+                    else: losses.append(abs(d))
+                ag = sum(gains)/n if gains else 0
+                al = sum(losses)/n if losses else 0
+                return round(100 - 100/(1+ag/al)) if al > 0 else 100
+
+            rsi = calc_rsi(closes)
+            stock["rsi"] = rsi
+
+            # MACD (10,25,7)
+            def ema(arr, n):
+                if len(arr) < n: return 0
+                k = 2/(n+1)
+                e = arr[-n]  # 최신순 역방향
+                for i in range(n-1, -1, -1):
+                    e = arr[i]*k + e*(1-k)
+                return e
+
+            ema10 = ema(closes, 10)
+            ema25 = ema(closes, 25)
+            macd_val = ema10 - ema25
+            stock["macd"] = round(macd_val)
+            stock["macd_golden"] = macd_val > 0  # 0선 위 = 골든크로스
+
+            # STO(5,3,3)
+            def calc_sto(highs, lows, closes, k=5):
+                if len(closes) < k: return 50
+                h = max([x for x in highs[:k] if x>0] or [1])
+                l = min([x for x in lows[:k] if x>0] or [0])
+                c = closes[0]
+                return round((c-l)/(h-l)*100) if h>l else 50
+
+            sto_k = calc_sto(highs, lows, closes)
+            stock["sto"] = sto_k
 
             price = stock.get("price", 0)
             stock["is_bullish"] = bool(
-                stock["ma5"] > 0 and stock["ma20"] > 0 and stock["ma60"] > 0 and
-                stock["ma120"] > 0 and stock["ma200"] > 0 and
-                stock["ma5"] > stock["ma20"] > stock["ma60"] > stock["ma120"] > stock["ma200"]
+                stock["ma5"]>0 and stock["ma20"]>0 and stock["ma60"]>0 and
+                stock["ma120"]>0 and stock["ma200"]>0 and
+                stock["ma5"]>stock["ma20"]>stock["ma60"]>stock["ma120"]>stock["ma200"]
             )
             stock["above_120"] = price > stock["ma120"] if stock["ma120"] > 0 else False
+
+            # ── 캔들패턴 (최근 3봉 기준) ──────────────
+            patterns = []
+            if len(closes) >= 3 and len(opens) >= 3:
+                c0,c1,c2 = closes[0],closes[1],closes[2]
+                o0,o1,o2 = opens[0],opens[1],opens[2]
+                h0,h1    = highs[0],highs[1]
+                l0,l1    = lows[0],lows[1]
+                body0 = abs(c0-o0)
+                body1 = abs(c1-o1)
+                full0 = h0-l0 if h0>l0 else 1
+
+                # 도지: 몸통이 전체의 10% 이하
+                if body0 < full0*0.1:
+                    patterns.append("도지")
+                # 쌍도지: 연속 2개 도지
+                if body0 < full0*0.1 and body1 < (h1-l1)*0.1:
+                    patterns.append("쌍도지")
+                # 망치형: 아래꼬리>=몸통*2, 위꼬리 작음, 양봉
+                lower_wick0 = min(c0,o0)-l0
+                upper_wick0 = h0-max(c0,o0)
+                if lower_wick0 >= body0*2 and upper_wick0 < body0*0.5 and c0>o0:
+                    patterns.append("망치형")
+                # 상승장악형: 전일음봉, 당일양봉이 전일봉 완전포함
+                if c1<o1 and c0>o0 and c0>o1 and o0<c1:
+                    patterns.append("상승장악형")
+                # 양음양: 양봉→음봉→양봉
+                if len(closes)>=3 and c2>o2 and c1<o1 and c0>o0 and o1>c2 and c1<o2:
+                    patterns.append("양음양")
+                # 샛별형: 큰음봉→도지→큰양봉
+                if len(closes)>=3 and c2<o2 and body1<(h1-l1)*0.2 and c0>o0 and body0>body2*0.5:
+                    patterns.append("샛별형")
+                # 저녁별형: 큰양봉→도지→큰음봉
+                if len(closes)>=3 and c2>o2 and body1<(h1-l1)*0.2 and c0<o0:
+                    patterns.append("저녁별형")
+
+            stock["patterns"] = patterns
 
             scan_status["ma_done"] += 1
 
