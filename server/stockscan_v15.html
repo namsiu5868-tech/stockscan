@@ -352,7 +352,7 @@ body{background:var(--bg);color:var(--text);font-family:'Noto Sans KR',sans-seri
 
     <div class="step" id="step1">
       <span class="step-num">1단계</span>
-      <div class="step-title">시장·섹터·주도주 <span class="step-stat" id="s1st">-</span></div>
+      <div class="step-title">시장·섹터·주도주 <span class="step-stat" id="s1st">-</span><span style="display:flex;gap:3px;margin-left:auto"><button onclick="stepAll(1,true)" style="font-size:8px;padding:1px 4px;border-radius:2px;border:1px solid #34d399;background:transparent;color:#34d399;cursor:pointer">전체</button><button onclick="stepAll(1,false)" style="font-size:8px;padding:1px 4px;border-radius:2px;border:1px solid #f87171;background:transparent;color:#f87171;cursor:pointer">해제</button></span></div>
       <div class="step-conds">
         <button class="cb auto" onclick="tog(this)">시장상승</button>
         <button class="cb manual" onclick="tog(this)">주도섹터</button>
@@ -367,7 +367,7 @@ body{background:var(--bg);color:var(--text);font-family:'Noto Sans KR',sans-seri
 
     <div class="step" id="step2">
       <span class="step-num">2단계</span>
-      <div class="step-title">재무·컨센서스 <span class="step-stat" id="s2st">-</span></div>
+      <div class="step-title">재무·컨센서스 <span class="step-stat" id="s2st">-</span><span style="display:flex;gap:3px;margin-left:auto"><button onclick="stepAll(2,true)" style="font-size:8px;padding:1px 4px;border-radius:2px;border:1px solid #34d399;background:transparent;color:#34d399;cursor:pointer">전체</button><button onclick="stepAll(2,false)" style="font-size:8px;padding:1px 4px;border-radius:2px;border:1px solid #f87171;background:transparent;color:#f87171;cursor:pointer">해제</button></span></div>
       <div class="step-conds">
         <button class="cb partial" onclick="tog(this)">매출증가</button>
         <button class="cb partial" onclick="tog(this)">영업이익증가</button>
@@ -382,7 +382,7 @@ body{background:var(--bg);color:var(--text);font-family:'Noto Sans KR',sans-seri
 
     <div class="step" id="step3">
       <span class="step-num">3단계</span>
-      <div class="step-title">이평·추세·파동 <span class="step-stat" id="s3st">-</span></div>
+      <div class="step-title">이평·추세·파동 <span class="step-stat" id="s3st">-</span><span style="display:flex;gap:3px;margin-left:auto"><button onclick="stepAll(3,true)" style="font-size:8px;padding:1px 4px;border-radius:2px;border:1px solid #34d399;background:transparent;color:#34d399;cursor:pointer">전체</button><button onclick="stepAll(3,false)" style="font-size:8px;padding:1px 4px;border-radius:2px;border:1px solid #f87171;background:transparent;color:#f87171;cursor:pointer">해제</button></span></div>
       <div class="step-conds">
         <button class="cb auto" onclick="tog(this)">수정초</button>
         <button class="cb auto" onclick="tog(this)">정배열</button>
@@ -400,7 +400,7 @@ body{background:var(--bg);color:var(--text);font-family:'Noto Sans KR',sans-seri
 
     <div class="step" id="step4">
       <span class="step-num">4단계</span>
-      <div class="step-title">캔들·패턴·거래량 <span class="step-stat" id="s4st">-</span></div>
+      <div class="step-title">캔들·패턴·거래량 <span class="step-stat" id="s4st">-</span><span style="display:flex;gap:3px;margin-left:auto"><button onclick="stepAll(4,true)" style="font-size:8px;padding:1px 4px;border-radius:2px;border:1px solid #34d399;background:transparent;color:#34d399;cursor:pointer">전체</button><button onclick="stepAll(4,false)" style="font-size:8px;padding:1px 4px;border-radius:2px;border:1px solid #f87171;background:transparent;color:#f87171;cursor:pointer">해제</button></span></div>
       <div class="step-conds">
         <button class="cb auto" onclick="tog(this)">쌍도지</button>
         <button class="cb auto" onclick="tog(this)">상승장악형</button>
@@ -420,7 +420,7 @@ body{background:var(--bg);color:var(--text);font-family:'Noto Sans KR',sans-seri
 
     <div class="step" id="step5">
       <span class="step-num">5단계</span>
-      <div class="step-title">보조지표 교차검증 <span class="step-stat" id="s5st">-</span></div>
+      <div class="step-title">보조지표 교차검증 <span class="step-stat" id="s5st">-</span><span style="display:flex;gap:3px;margin-left:auto"><button onclick="stepAll(5,true)" style="font-size:8px;padding:1px 4px;border-radius:2px;border:1px solid #34d399;background:transparent;color:#34d399;cursor:pointer">전체</button><button onclick="stepAll(5,false)" style="font-size:8px;padding:1px 4px;border-radius:2px;border:1px solid #f87171;background:transparent;color:#f87171;cursor:pointer">해제</button></span></div>
       <div class="step-conds">
         <button class="cb auto" onclick="tog(this)">RSI침체</button>
         <button class="cb auto" onclick="tog(this)">STO침체</button>
@@ -690,6 +690,21 @@ function fmtPct(v){ const n=pct(v); return (n>=0?'+':'')+n.toFixed(2)+'%'; }
 // ─── 피라미드 ──────────────────────────────────────
 function tog(btn){ 
   btn.classList.toggle('on'); 
+  updateStepStatus();
+  const anySelected = document.querySelectorAll('.cb.on').length > 0;
+  const scanBtn = document.getElementById('scanBtn');
+  scanBtn.style.opacity = anySelected ? '1' : '0.4';
+  scanBtn.style.cursor = anySelected ? 'pointer' : 'not-allowed';
+  if(STOCKS.length > 0) applyFilterAndRender();
+}
+
+function stepAll(stepNum, select){
+  const step = document.getElementById('step'+stepNum);
+  if(!step) return;
+  step.querySelectorAll('.cb').forEach(btn => {
+    if(select) btn.classList.add('on');
+    else btn.classList.remove('on');
+  });
   updateStepStatus();
   const anySelected = document.querySelectorAll('.cb.on').length > 0;
   const scanBtn = document.getElementById('scanBtn');
