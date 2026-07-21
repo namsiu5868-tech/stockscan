@@ -338,7 +338,7 @@ body{background:var(--bg);color:var(--text);font-family:'Noto Sans KR',sans-seri
   </div>
   <div class="hdr-right">
     <button class="ai-consult-btn" onclick="openAI()">🤖 AI 상담</button>
-    <button class="scan-btn" id="scanBtn" onclick="startScan()">▶ 전종목 스캔</button>
+    <button class="scan-btn" id="scanBtn" onclick="startScan()" style="opacity:0.4;cursor:not-allowed" disabled>▶ 전종목 스캔</button>
   </div>
 </div>
 
@@ -687,16 +687,27 @@ function fmtPct(v){ const n=pct(v); return (n>=0?'+':'')+n.toFixed(2)+'%'; }
 function tog(btn){ 
   btn.classList.toggle('on'); 
   updateStepStatus();
+  // 버튼 선택 여부에 따라 스캔 버튼 활성화
+  const anySelected = document.querySelectorAll('.cb.on').length > 0;
+  const scanBtn = document.getElementById('scanBtn');
+  if(anySelected){
+    scanBtn.disabled = false;
+    scanBtn.style.opacity = '1';
+    scanBtn.style.cursor = 'pointer';
+  } else {
+    scanBtn.disabled = true;
+    scanBtn.style.opacity = '0.4';
+    scanBtn.style.cursor = 'not-allowed';
+  }
   if(STOCKS.length > 0) applyFilterAndRender();
 }
 
 function applyFilterAndRender(){
   const activeButtons = [...document.querySelectorAll('.cb.on')].map(b=>b.textContent.trim());
-  const base = FILTERED_STOCKS.length > 0 ? FILTERED_STOCKS : STOCKS;
-  let filtered = [...base];
+  let filtered = [...STOCKS];
 
   if(activeButtons.length > 0){
-    filtered = base.filter(s => {
+    filtered = STOCKS.filter(s => {
       // 4단계제외 — AND 방식 (제외 조건)
       if(activeButtons.includes('4단계제외')){
         if(s.price < s.ma200 && s.ma200 > 0 && s.ma60 < s.ma120) return false;
@@ -811,6 +822,12 @@ function removeSR(idx){
 
 // ─── 스캔 (수집된 전종목 데이터 로드 + 조건 필터링) ────────────
 async function startScan(){
+  const anySelected = document.querySelectorAll('.cb.on').length > 0;
+  if(!anySelected){
+    alert('피라미드 버튼을 하나 이상 선택해주세요.');
+    return;
+  }
+
   const overlay=document.getElementById('overlay');
   const bar=document.getElementById('progBar');
   const msg=document.getElementById('scanMsg');
