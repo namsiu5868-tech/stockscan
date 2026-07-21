@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>StockScan Pro v14</title>
+<title>StockScan Pro v15</title>
 <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@300;400;500;700&family=JetBrains+Mono:wght@400;600;700&display=swap" rel="stylesheet">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js">
 // ─── 서버 상태 체크 ───────────────────────────────
@@ -325,7 +325,7 @@ body{background:var(--bg);color:var(--text);font-family:'Noto Sans KR',sans-seri
 
 <!-- 헤더 -->
 <div class="hdr">
-  <div class="logo">STOCK<em>SCAN</em> <span style="font-size:9px;color:#aaccff;font-weight:600;letter-spacing:1px">PRO v14</span></div>
+  <div class="logo">STOCK<em>SCAN</em> <span style="font-size:9px;color:#aaccff;font-weight:600;letter-spacing:1px">PRO v15</span></div>
   <div class="mkt">
     <div class="mkt-item"><div class="mkt-name">KOSPI</div><div class="mkt-val up">2,847 <span style="font-size:8px">+0.42%</span></div></div>
     <div class="mkt-item"><div class="mkt-name">KOSDAQ</div><div class="mkt-val dn">842 <span style="font-size:8px">-0.18%</span></div></div>
@@ -338,7 +338,7 @@ body{background:var(--bg);color:var(--text);font-family:'Noto Sans KR',sans-seri
   </div>
   <div class="hdr-right">
     <button class="ai-consult-btn" onclick="openAI()">🤖 AI 상담</button>
-    <button class="scan-btn" id="scanBtn" onclick="startScan()" style="opacity:0.4;cursor:not-allowed" disabled>▶ 전종목 스캔</button>
+    <button class="scan-btn" id="scanBtn" onclick="startScan()">▶ 전종목 스캔</button>
   </div>
 </div>
 
@@ -687,18 +687,10 @@ function fmtPct(v){ const n=pct(v); return (n>=0?'+':'')+n.toFixed(2)+'%'; }
 function tog(btn){ 
   btn.classList.toggle('on'); 
   updateStepStatus();
-  // 버튼 선택 여부에 따라 스캔 버튼 활성화
   const anySelected = document.querySelectorAll('.cb.on').length > 0;
   const scanBtn = document.getElementById('scanBtn');
-  if(anySelected){
-    scanBtn.disabled = false;
-    scanBtn.style.opacity = '1';
-    scanBtn.style.cursor = 'pointer';
-  } else {
-    scanBtn.disabled = true;
-    scanBtn.style.opacity = '0.4';
-    scanBtn.style.cursor = 'not-allowed';
-  }
+  scanBtn.style.opacity = anySelected ? '1' : '0.4';
+  scanBtn.style.cursor = anySelected ? 'pointer' : 'not-allowed';
   if(STOCKS.length > 0) applyFilterAndRender();
 }
 
@@ -824,7 +816,7 @@ function removeSR(idx){
 async function startScan(){
   const anySelected = document.querySelectorAll('.cb.on').length > 0;
   if(!anySelected){
-    alert('피라미드 버튼을 하나 이상 선택해주세요.');
+    document.getElementById('scanMsg').textContent='피라미드 버튼을 하나 이상 선택해주세요.';
     return;
   }
 
