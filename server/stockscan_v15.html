@@ -462,30 +462,15 @@ body{background:var(--bg);color:var(--text);font-family:'Noto Sans KR',sans-seri
 <!-- 메인 -->
 <div class="main">
 
-  <!-- 종목 리스트 -->
-  <div class="list-panel" id="listPanel">
-    <div class="list-hdr">
-      <div class="list-hdr-l">
-        <span class="list-title" id="listTitle">선별 종목</span>
-        <span class="cnt-badge" id="listCnt">0</span>
-      </div>
-      <div style="display:flex;gap:2px">
-        <button style="padding:1px 4px;border-radius:2px;border:1px solid var(--border);background:transparent;color:#ffffff;font-size:8px;cursor:pointer" onclick="sortBy('score')">점수</button>
-        <button style="padding:1px 4px;border-radius:2px;border:1px solid var(--border);background:transparent;color:#ffffff;font-size:8px;cursor:pointer" onclick="sortBy('change')">등락</button>
-        <button style="padding:1px 4px;border-radius:2px;border:1px solid var(--border);background:transparent;color:#ffffff;font-size:8px;cursor:pointer" onclick="sortBy('rs')">RS</button>
-      </div>
-    </div>
-    <div class="slist" id="stockList">
-      <div class="empty-chart" style="padding:30px 0"><div class="empty-icon">🔍</div><div class="empty-text">스캔 실행</div></div>
-    </div>
-  </div>
-
-  <!-- 차트 패널 -->
-  <!-- 가운데 패널: 피라미드 통과현황 + 종목비교 -->
+  <!-- 통합 종목 테이블 (좌측+가운데 합침) -->
   <div class="mid-panel" id="chartPanel">
+
+    <!-- 헤더: 선택된 종목 정보 + 단계 표시 -->
     <div class="mid-hdr">
       <div style="display:flex;align-items:center;gap:10px">
-        <span class="chart-sname" id="cName">-</span>
+        <span style="font-size:11px;font-weight:700;color:#ffffff">선별 종목</span>
+        <span class="cnt-badge" id="listCnt" style="background:var(--accent);color:#0f1829;padding:1px 7px;border-radius:10px;font-size:10px;font-weight:700">0</span>
+        <span class="chart-sname" id="cName" style="color:#4da6ff;margin-left:10px">-</span>
         <span class="chart-scode" id="cCode"></span>
         <span class="chart-price up" id="cPrice">-</span>
         <span class="chart-chg up" id="cChg"></span>
@@ -502,9 +487,9 @@ body{background:var(--bg);color:var(--text);font-family:'Noto Sans KR',sans-seri
     </div>
 
     <div class="mid-body">
-      <!-- 피라미드 통과현황 -->
+      <!-- 피라미드 통과현황 (선택 종목) -->
       <div class="pass-panel">
-        <div class="pass-title">📊 피라미드 조건 통과 현황</div>
+        <div class="pass-title">📊 선택 종목 피라미드 통과 현황</div>
         <div class="pass-steps">
           <div class="pass-step">
             <div class="pass-step-num">1단계</div>
@@ -534,35 +519,36 @@ body{background:var(--bg);color:var(--text);font-family:'Noto Sans KR',sans-seri
         </div>
       </div>
 
-      <!-- 종목 비교 테이블 -->
+      <!-- 종목 테이블 (전체) -->
       <div class="cmp-panel">
-        <div class="cmp-title">📋 선별 종목 비교 — 현재가 / 등락률 / 거래량 / 이평선 / 보조지표</div>
         <div class="cmp-table-wrap">
           <table class="cmp-table" id="cmpTable">
             <thead>
               <tr>
-                <th>종목명</th>
-                <th>현재가</th>
-                <th>등락률</th>
-                <th>거래량</th>
-                <th>5일</th>
-                <th>20일</th>
-                <th>60일</th>
-                <th>120일</th>
-                <th>PER</th>
-                <th>PBR</th>
-                <th>ROE</th>
-                <th>RS</th>
+                <th style="text-align:center;width:36px">#</th>
+                <th onclick="sortTable('name')" style="text-align:left;cursor:pointer">종목명 ⇅</th>
+                <th style="text-align:left">시장</th>
+                <th onclick="sortTable('price')" style="cursor:pointer">현재가 ⇅</th>
+                <th onclick="sortTable('change')" style="cursor:pointer">등락률 ⇅</th>
+                <th onclick="sortTable('volume')" style="cursor:pointer">거래량 ⇅</th>
+                <th onclick="sortTable('ma5')" style="cursor:pointer">5일 ⇅</th>
+                <th onclick="sortTable('ma20')" style="cursor:pointer">20일 ⇅</th>
+                <th onclick="sortTable('ma60')" style="cursor:pointer">60일 ⇅</th>
+                <th onclick="sortTable('ma120')" style="cursor:pointer">120일 ⇅</th>
+                <th onclick="sortTable('per')" style="cursor:pointer">PER ⇅</th>
+                <th onclick="sortTable('pbr')" style="cursor:pointer">PBR ⇅</th>
+                <th onclick="sortTable('roe')" style="cursor:pointer">ROE ⇅</th>
+                <th onclick="sortTable('rs')" style="cursor:pointer">RS ⇅</th>
               </tr>
             </thead>
             <tbody id="cmpBody">
-              <tr><td colspan="12" style="text-align:center;color:#ffffff;padding:20px">스캔 후 종목을 선택하면 비교 테이블이 표시됩니다</td></tr>
+              <tr><td colspan="14" style="text-align:center;color:#ffffff;padding:30px">▶ 전종목 스캔을 눌러주세요</td></tr>
             </tbody>
           </table>
         </div>
       </div>
 
-      <!-- 하단 수치 표시 -->
+      <!-- 하단 수치 -->
       <div class="ind-row-bot">
         <div class="ind"><span class="ind-n">5일</span><span class="ind-v n" id="iMa5">-</span></div>
         <div class="ind"><span class="ind-n">20일</span><span class="ind-v n" id="iMa20">-</span></div>
@@ -577,7 +563,7 @@ body{background:var(--bg);color:var(--text);font-family:'Noto Sans KR',sans-seri
     </div>
   </div>
 
-  <!-- 숨김 처리된 기존 차트 ID (JS 오류 방지) -->
+  <!-- 숨김 처리 -->
   <div style="display:none">
     <canvas id="mainChart"></canvas><canvas id="volChart"></canvas>
     <canvas id="rsiChart"></canvas><canvas id="macdChart"></canvas>
@@ -586,6 +572,7 @@ body{background:var(--bg);color:var(--text);font-family:'Noto Sans KR',sans-seri
     <span id="iSto"></span><span id="iMacd"></span>
     <span id="iDisp"></span><span id="iGold"></span><span id="iFibo"></span>
     <div id="srLinesList"></div>
+    <div id="stockList"></div>
   </div>
 
   <!-- 우측 패널 -->
@@ -995,87 +982,116 @@ function getSampleStocks(){
 }
 
 // ─── 종목 리스트 렌더링 ────────────────────────────
+// 현재 표시 중인 리스트 및 정렬 상태
+let DISPLAY_STOCKS = [];
+let sortCol = '';
+let sortDir = 1; // 1=내림차순, -1=오름차순
+
 function renderList(stocks){
-  document.getElementById('listCnt').textContent=stocks.length;
-  document.getElementById('resNum').textContent=stocks.length;
-  document.getElementById('stockList').innerHTML=stocks.map((s,i)=>{
-    const pc=s.steps.filter(x=>x===1).length;
-    const sc=pc>=4?'var(--buy)':pc>=3?'var(--warn)':'var(--sell)';
-    const chgClass = s.change>=0?'up':'dn';
-    return `<div class="si ${i===0?'sel':''}" onclick="selectStock(this,${i})">
-      <div class="si-top">
-        <div><div class="si-name">${s.name}</div><div class="si-code">${s.code} · ${s.sector}</div></div>
-        <div class="si-right">
-          <div class="si-price ${chgClass}">${s.price.toLocaleString()}</div>
-          <div class="si-chg ${chgClass}">${s.change>=0?'+':''}${s.change.toFixed(2)}%</div>
-        </div>
-      </div>
-      <div class="si-bot">
-        <div class="si-sigs">
-          ${s.signals.slice(0,2).map(sg=>`<span class="sig ${sg.t==='sb'?'g':sg.t==='b'?'b':'s'}">${sg.txt.split(' ')[0]}</span>`).join('')}
-          <span class="sig p">RS${s.rs}</span>
-        </div>
-        <div class="si-score" style="color:${sc}">${pc}/5</div>
-      </div>
-    </div>`;
-  }).join('');
-  if(document.querySelector('.si')){
-    selectStock(document.querySelector('.si'),0);
-    updateCmpTable();
-  }
+  DISPLAY_STOCKS = [...stocks];
+  document.getElementById('listCnt').textContent = stocks.length;
+  document.getElementById('resNum').textContent = stocks.length;
+  renderTable();
+  if(stocks.length > 0) selectByIdx(0);
 }
 
-// ─── 종목 선택 ─────────────────────────────────────
-async function selectStock(el, idx){
-  document.querySelectorAll('.si').forEach(i=>i.classList.remove('sel'));
-  el.classList.add('sel');
-  selIdx = idx;
-  const s = STOCKS[idx];
-  selCode = s.code;
+function renderTable(){
+  const tbody = document.getElementById('cmpBody');
+  if(!tbody) return;
+  tbody.innerHTML = DISPLAY_STOCKS.map((s,i)=>{
+    const chgCls = s.change>=0?'up':'dn';
+    const chgStr = (s.change>=0?'+':'')+s.change.toFixed(2)+'%';
+    const isSel = i===selIdx;
+    return `<tr class="${isSel?'selected':''}" onclick="selectByIdx(${i})" style="cursor:pointer">
+      <td style="text-align:center;color:#94a3b8">${i+1}</td>
+      <td style="text-align:left;font-weight:700;color:#ffffff;max-width:100px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="${s.name}">${s.name}</td>
+      <td style="text-align:left;color:#94a3b8;font-size:9px">${s.sector||'-'}</td>
+      <td style="font-weight:700">${s.price>0?s.price.toLocaleString():'-'}</td>
+      <td class="${chgCls}" style="font-weight:700">${chgStr}</td>
+      <td>${s.volume>0?(s.volume/10000).toFixed(0)+'만':'-'}</td>
+      <td>${s.ma5>0?s.ma5.toLocaleString():'-'}</td>
+      <td>${s.ma20>0?s.ma20.toLocaleString():'-'}</td>
+      <td>${s.ma60>0?s.ma60.toLocaleString():'-'}</td>
+      <td>${s.ma120>0?s.ma120.toLocaleString():'-'}</td>
+      <td>${s.fin&&s.fin.per>0?s.fin.per.toFixed(1)+'x':'-'}</td>
+      <td>${s.fin&&s.fin.pbr>0?s.fin.pbr.toFixed(2)+'x':'-'}</td>
+      <td>${s.fin&&s.fin.roe!==0?s.fin.roe.toFixed(1)+'%':'-'}</td>
+      <td style="color:${s.rs>=80?'#34d399':s.rs>=60?'#fbbf24':'#f8fafc'};font-weight:700">${s.rs}</td>
+    </tr>`;
+  }).join('');
+}
 
-  // 헤더 기본 정보 표시 (로컬 데이터로 먼저)
+function sortTable(col){
+  if(sortCol === col){
+    sortDir *= -1;
+  } else {
+    sortCol = col;
+    sortDir = -1; // 첫 클릭은 내림차순
+  }
+  DISPLAY_STOCKS.sort((a,b)=>{
+    let va, vb;
+    if(col==='name')   { va=a.name; vb=b.name; return va.localeCompare(vb)*sortDir; }
+    if(col==='price')  { va=a.price; vb=b.price; }
+    if(col==='change') { va=a.change; vb=b.change; }
+    if(col==='volume') { va=a.volume; vb=b.volume; }
+    if(col==='ma5')    { va=a.ma5; vb=b.ma5; }
+    if(col==='ma20')   { va=a.ma20; vb=b.ma20; }
+    if(col==='ma60')   { va=a.ma60; vb=b.ma60; }
+    if(col==='ma120')  { va=a.ma120; vb=b.ma120; }
+    if(col==='per')    { va=a.fin?.per||0; vb=b.fin?.per||0; }
+    if(col==='pbr')    { va=a.fin?.pbr||0; vb=b.fin?.pbr||0; }
+    if(col==='roe')    { va=a.fin?.roe||0; vb=b.fin?.roe||0; }
+    if(col==='rs')     { va=a.rs; vb=b.rs; }
+    return ((va||0)-(vb||0))*sortDir;
+  });
+  renderTable();
+}
+
+function selectByIdx(idx){
+  selIdx = idx;
+  const s = DISPLAY_STOCKS[idx];
+  if(!s) return;
+  selCode = s.code;
   updateHeader(s);
   updateInds(s);
   updatePassDots(s);
   renderRightPanel(s);
-
-  // 실데이터로 헤더 업데이트
-  try {
-    const res = await fetch(`${API}/stock/info/${s.code}`);
-    const info = await res.json();
+  updatePassPanel(s);
+  // 테이블 선택 행 하이라이트
+  document.querySelectorAll('#cmpBody tr').forEach((tr,i)=>{
+    tr.classList.toggle('selected', i===idx);
+  });
+  // 실시간 가격 업데이트
+  fetch(`${API}/stock/info/${s.code}`).then(r=>r.json()).then(info=>{
     if(info && !info.error){
       const realPrice = abs(info.cur_prc);
-      const realChange = pct(info.trde_tern_rt);
+      const realChange = parseFloat(info.flu_rt||0);
       if(realPrice > 0){
-        STOCKS[idx].price = realPrice;
-        STOCKS[idx].change = realChange;
-        STOCKS[idx].rsi = 45; // 추후 계산
-        STOCKS[idx].fin.per = parseFloat(info.per)||s.fin.per;
-        STOCKS[idx].fin.pbr = parseFloat(info.pbr)||1;
-        STOCKS[idx].fin.roe = parseFloat(info.roe)||s.fin.roe;
-        updateHeader(STOCKS[idx]);
-        // 리스트 해당 항목 가격도 업데이트
-        const si = document.querySelectorAll('.si')[idx];
-        if(si){
-          si.querySelector('.si-price').textContent = realPrice.toLocaleString();
-          si.querySelector('.si-price').className = `si-price ${realChange>=0?'up':'dn'}`;
-          si.querySelector('.si-chg').textContent = (realChange>=0?'+':'')+realChange.toFixed(2)+'%';
-          si.querySelector('.si-chg').className = `si-chg ${realChange>=0?'up':'dn'}`;
-        }
+        DISPLAY_STOCKS[idx].price = realPrice;
+        DISPLAY_STOCKS[idx].change = realChange;
+        DISPLAY_STOCKS[idx].fin = DISPLAY_STOCKS[idx].fin || {};
+        DISPLAY_STOCKS[idx].fin.per = parseFloat(info.per)||0;
+        DISPLAY_STOCKS[idx].fin.pbr = parseFloat(info.pbr)||0;
+        DISPLAY_STOCKS[idx].fin.roe = parseFloat(info.roe)||0;
+        updateHeader(DISPLAY_STOCKS[idx]);
+        renderTable();
       }
     }
-  } catch(e){ console.log('실시간 가격 조회 실패:', e); }
-
-  // 뉴스 로드
+  }).catch(()=>{});
   loadNews(s.code, s.name);
+  updateAIPreviewIfOpen();
+}
 
-  // 피라미드 통과현황 업데이트
-  updatePassPanel(s);
+function updateCmpTable(){ renderTable(); }
+function sortBy(col){ sortTable(col); }
 
-  // 비교 테이블 업데이트
-  updateCmpTable();
+function updateAIPreviewIfOpen(){
+  if(document.getElementById('aiModal')?.classList.contains('show')) updateAIPreview();
+}
 
-  if(document.getElementById('aiModal').classList.contains('show')) updateAIPreview();
+// ─── 종목 선택 (구버전 호환용) ─────────────────────────────────────
+async function selectStock(el, idx){
+  selectByIdx(idx);
 }
 
 // ─── 피라미드 통과현황 ───────────────────────────────
@@ -1116,31 +1132,6 @@ function updatePassPanel(s){
 }
 
 // ─── 종목 비교 테이블 ───────────────────────────────
-function updateCmpTable(){
-  const tbody = document.getElementById('cmpBody');
-  if(!tbody) return;
-  const list = FILTERED_STOCKS.length > 0 ? FILTERED_STOCKS : STOCKS;
-  tbody.innerHTML = list.map((s,i)=>{
-    const chgCls = s.change>=0?'up':'dn';
-    const chgStr = (s.change>=0?'+':'')+s.change.toFixed(2)+'%';
-    const isSel = i===selIdx;
-    return `<tr class="${isSel?'selected':''}" onclick="selectStock(document.querySelectorAll('.si')[${i}], ${i})">
-      <td title="${s.name}">${s.name.length>6?s.name.slice(0,6)+'..':s.name}</td>
-      <td>${s.price.toLocaleString()}</td>
-      <td class="${chgCls}">${chgStr}</td>
-      <td>${s.volume>0?(s.volume/10000).toFixed(0)+'만':'-'}</td>
-      <td>${s.ma5>0?s.ma5.toLocaleString():'-'}</td>
-      <td>${s.ma20>0?s.ma20.toLocaleString():'-'}</td>
-      <td>${s.ma60>0?s.ma60.toLocaleString():'-'}</td>
-      <td>${s.ma120>0?s.ma120.toLocaleString():'-'}</td>
-      <td>${s.fin.per>0?s.fin.per.toFixed(1)+'x':'-'}</td>
-      <td>${s.fin.pbr>0?s.fin.pbr.toFixed(2)+'x':'-'}</td>
-      <td>${s.fin.roe!==0?s.fin.roe.toFixed(1)+'%':'-'}</td>
-      <td>${s.rs}</td>
-    </tr>`;
-  }).join('');
-}
-
 // ─── 차트 기간 탭 ──────────────────────────────────
 let curPeriod = 'D';
 function setTab(btn, tab){
